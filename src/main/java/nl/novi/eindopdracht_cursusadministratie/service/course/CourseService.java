@@ -23,12 +23,12 @@ public class CourseService {
         this.locationRepository = locationRepository;
     }
 
-    // ✅ Alle cursussen ophalen
+    //  Alle cursussen ophalen
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
     }
 
-    // ✅ Cursus aanmaken met trainer + locatie
+    //  Cursus aanmaken met trainer + locatie
     public Course createCourse(Course course) {
         if (course.getTrainer() != null && course.getTrainer().getId() != null) {
             User trainer = userRepository.findById(course.getTrainer().getId())
@@ -45,13 +45,13 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
-    // ✅ Cursus ophalen op ID
+    //  Cursus ophalen op ID
     public Course getCourseById(Long id) {
         return courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + id));
     }
 
-    // ✅ Cursus bijwerken
+    //  Cursus bijwerken
     public Course updateCourse(Long id, Course updatedCourse) {
         return courseRepository.findById(id)
                 .map(existingCourse -> {
@@ -76,7 +76,7 @@ public class CourseService {
                 .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + id));
     }
 
-    // ✅ Cursus verwijderen
+    //  Cursus verwijderen
     public void deleteCourse(Long id) {
         courseRepository.deleteById(id);
     }

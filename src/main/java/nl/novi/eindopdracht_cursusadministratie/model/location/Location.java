@@ -16,7 +16,7 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String companyName;  // ✅ Bedrijfsnaam waar de training wordt gegeven
+    private String companyName;  // Bedrijfsnaam waar de training wordt gegeven
     private String address;      // Straat + huisnummer
     private String postalCode;   // Postcode
     private String city;         // Plaatsnaam
