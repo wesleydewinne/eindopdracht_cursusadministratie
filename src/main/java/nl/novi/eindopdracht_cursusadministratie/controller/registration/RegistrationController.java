@@ -19,25 +19,25 @@ public class RegistrationController {
         this.registrationService = registrationService;
     }
 
-    // ✅ Alle inschrijvingen ophalen
+    //  Alle inschrijvingen ophalen
     @GetMapping
     public List<RegistrationResponseDto> getAllRegistrations() {
         return registrationService.getAllRegistrationDtos();
     }
 
-    // ✅ Inschrijving ophalen op ID
+    //  Inschrijving ophalen op ID
     @GetMapping("/{id}")
     public RegistrationResponseDto getRegistrationById(@PathVariable Long id) {
         return registrationService.getRegistrationDtoById(id);
     }
 
-    // ✅ Nieuwe inschrijving aanmaken (met JSON-body)
+    //  Nieuwe inschrijving aanmaken (met JSON-body)
     @PostMapping(consumes = "application/json", produces = "application/json")
     public RegistrationResponseDto createRegistration(@RequestBody CreateRegistrationDto dto) {
         return registrationService.createRegistrationDto(dto.getCourseId(), dto.getStudentId());
     }
 
-    // ✅ Status van inschrijving wijzigen
+    //  Status van inschrijving wijzigen
     @PutMapping("/{id}/status")
     public ResponseEntity<RegistrationResponseDto> updateStatus(
             @PathVariable Long id,
@@ -45,7 +45,7 @@ public class RegistrationController {
         return ResponseEntity.ok(registrationService.updateRegistrationStatusDto(id, status));
     }
 
-    // ✅ Inschrijving verwijderen
+    //  Inschrijving verwijderen
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRegistration(@PathVariable Long id) {
         registrationService.deleteRegistration(id);
