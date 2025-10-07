@@ -21,6 +21,7 @@ public class Registration {
     private Long id;
 
     private LocalDate registrationDate = LocalDate.now();
+    private boolean present;
 
     @Enumerated(EnumType.STRING)
     private RegistrationStatus status = RegistrationStatus.PENDING;

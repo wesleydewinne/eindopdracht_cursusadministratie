@@ -1,6 +1,7 @@
 package nl.novi.eindopdracht_cursusadministratie.controller.user;
 
 import lombok.RequiredArgsConstructor;
+import nl.novi.eindopdracht_cursusadministratie.dto.certificate.GenerateCertificateRequest;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
@@ -13,8 +14,8 @@ import java.util.List;
 
 /**
  * Controller voor trainers.
- * Trainers kunnen hun gegevens beheren, cursussen inzien,
- * aanwezigheid registreren en certificaten genereren.
+ * Trainers kunnen hun eigen gegevens beheren, cursussen inzien,
+ * aanwezigheid van cursisten registreren en certificaten genereren.
  */
 @RestController
 @RequestMapping("/api/trainers")
@@ -43,7 +44,7 @@ public class TrainerController {
     //  CURSUSSEN
     // ================================================================
 
-    /** Cursussen van deze trainer ophalen */
+    /** Alle cursussen van deze trainer ophalen */
     @GetMapping("/{id}/courses")
     public ResponseEntity<List<Course>> getCoursesByTrainer(@PathVariable Long id) {
         return ResponseEntity.ok(trainerService.getCoursesByTrainer(id));
@@ -53,7 +54,11 @@ public class TrainerController {
     //  AANWEZIGHEID
     // ================================================================
 
-    /** Aanwezigheid van een cursist registreren */
+    /**
+     * Registreert de aanwezigheid van een cursist voor een specifieke inschrijving.
+     * @param registrationId ID van de inschrijving
+     * @param aanwezig true = aanwezig, false = afwezig
+     */
     @PutMapping("/registrations/{registrationId}/attendance")
     public ResponseEntity<Registration> markAttendance(
             @PathVariable Long registrationId,
@@ -65,41 +70,23 @@ public class TrainerController {
     //  CERTIFICATEN
     // ================================================================
 
-    /** Certificaat genereren */
+    /**
+     * Genereert een nieuw certificaat voor een cursist.
+     * Ontvangt alleen de minimale gegevens via GenerateCertificateRequest.
+     */
     @PostMapping("/certificates")
-    public ResponseEntity<Certificate> generateCertificate(@RequestBody Certificate certificate) {
-        return ResponseEntity.ok(trainerService.generateCertificate(certificate));
+    public ResponseEntity<Certificate> generateCertificate(@RequestBody GenerateCertificateRequest req) {
+        Certificate createdCertificate = trainerService.generateCertificate(
+                req.courseId(),
+                req.studentId(),
+                req.issuedBy()
+        );
+        return ResponseEntity.ok(createdCertificate);
     }
 
     /** Alle certificaten van deze trainer ophalen */
     @GetMapping("/{id}/certificates")
     public ResponseEntity<List<Certificate>> getCertificatesByTrainer(@PathVariable Long id) {
         return ResponseEntity.ok(trainerService.getCertificatesByTrainer(id));
-    }
-
-    // ================================================================
-    //  ONTRUIMINGSVERSLAGEN (toevoegen in volgende commit)
-    // ================================================================
-
-    /** Eigen verslagen ophalen */
-    @GetMapping("/{trainerId}/evacuation-reports")
-    public ResponseEntity<List<EvacuationReport>> getReportsByTrainer(@PathVariable Long trainerId) {
-        return ResponseEntity.ok(trainerService.getReportsByTrainer(trainerId));
-    }
-
-    /** Nieuw verslag aanmaken */
-    @PostMapping("/{trainerId}/evacuation-reports")
-    public ResponseEntity<EvacuationReport> createEvacuationReport(
-            @PathVariable Long trainerId,
-            @RequestBody EvacuationReport report) {
-        return ResponseEntity.ok(trainerService.createEvacuationReport(report));
-    }
-
-    /** Verslag bijwerken (alleen als nog niet goedgekeurd) */
-    @PutMapping("/evacuation-reports/{id}")
-    public ResponseEntity<EvacuationReport> updateEvacuationReport(
-            @PathVariable Long id,
-            @RequestBody EvacuationReport updatedReport) {
-        return ResponseEntity.ok(trainerService.updateEvacuationReport(id, updatedReport));
     }
 }

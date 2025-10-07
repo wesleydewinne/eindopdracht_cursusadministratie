@@ -20,12 +20,14 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
+    private String name;
+    private String description;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private Integer maxParticipants;
 
     @Enumerated(EnumType.STRING)
     private TrainingType type;
-
-    private LocalDate date;
 
     // Relatie: één trainer geeft meerdere cursussen
     @ManyToOne

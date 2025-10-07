@@ -5,6 +5,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.location.Location;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.location.LocationRepository;
+import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,18 +17,18 @@ public class CourseService {
     private final UserRepository userRepository;
     private final LocationRepository locationRepository;
 
-    public CourseService(CourseRepository courseRepository, UserRepository userRepository, LocationRepository locationRepository) {
+    public CourseService(CourseRepository courseRepository,
+                         UserRepository userRepository,
+                         LocationRepository locationRepository) {
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
     }
 
-    //  Alle cursussen ophalen
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
     }
 
-    //  Cursus aanmaken met trainer + locatie
     public Course createCourse(Course course) {
         if (course.getTrainer() != null && course.getTrainer().getId() != null) {
             User trainer = userRepository.findById(course.getTrainer().getId())
@@ -44,19 +45,20 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
-    //  Cursus ophalen op ID
     public Course getCourseById(Long id) {
         return courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + id));
     }
 
-    //  Cursus bijwerken
     public Course updateCourse(Long id, Course updatedCourse) {
         return courseRepository.findById(id)
                 .map(existingCourse -> {
-                    existingCourse.setTitle(updatedCourse.getTitle());
+                    existingCourse.setName(updatedCourse.getName());
+                    existingCourse.setDescription(updatedCourse.getDescription());
                     existingCourse.setType(updatedCourse.getType());
-                    existingCourse.setDate(updatedCourse.getDate());
+                    existingCourse.setStartDate(updatedCourse.getStartDate());
+                    existingCourse.setEndDate(updatedCourse.getEndDate());
+                    existingCourse.setMaxParticipants(updatedCourse.getMaxParticipants());
 
                     if (updatedCourse.getTrainer() != null && updatedCourse.getTrainer().getId() != null) {
                         User trainer = userRepository.findById(updatedCourse.getTrainer().getId())
@@ -75,7 +77,6 @@ public class CourseService {
                 .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + id));
     }
 
-    //  Cursus verwijderen
     public void deleteCourse(Long id) {
         courseRepository.deleteById(id);
     }

@@ -8,6 +8,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.course.TrainingType;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.certificate.CertificateRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
+import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,18 +29,15 @@ public class CertificateService {
         this.courseRepository = courseRepository;
     }
 
-    //  Alle certificaten ophalen
     public List<Certificate> getAllCertificates() {
         return certificateRepository.findAll();
     }
 
-    //  Certificaat ophalen op ID
     public Certificate getCertificateById(Long id) {
         return certificateRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Certificate not found with ID: " + id));
     }
 
-    //  Certificaat aanmaken
     public Certificate createCertificate(Long studentId, Long courseId) {
         User student = userRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with ID: " + studentId));
@@ -47,15 +45,15 @@ public class CertificateService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + courseId));
 
-        // Alleen certificaat als het GEEN ontruimingsoefening is
         if (course.getType() == TrainingType.ONTRUIMINGSOEFENING) {
             throw new IllegalArgumentException("No certificate is issued for evacuation drills.");
         }
 
+        LocalDate today = LocalDate.now();
         Certificate certificate = new Certificate();
         certificate.setCertificateNumber(CertificateNumberHelper.generateCertificateNumber());
-        certificate.setIssueDate(LocalDate.now());
-        certificate.setExpiryDate(DateHelper.calculateExpiryDate(LocalDate.now(), course.getType()));
+        certificate.setIssueDate(today);
+        certificate.setExpiryDate(DateHelper.calculateExpiryDate(today, course.getType()));
         certificate.setIssuedBy("Safety First BV");
         certificate.setStudent(student);
         certificate.setCourse(course);
@@ -63,7 +61,6 @@ public class CertificateService {
         return certificateRepository.save(certificate);
     }
 
-    //  Certificaat verwijderen
     public void deleteCertificate(Long id) {
         certificateRepository.deleteById(id);
     }
