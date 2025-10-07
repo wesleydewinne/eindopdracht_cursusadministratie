@@ -8,6 +8,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.report.ReportStatus;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.report.EvacuationReportRepository;
+import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -72,14 +73,13 @@ public class EvacuationReportService {
         report.setObservations(reportData.getObservations());
         report.setImprovements(reportData.getImprovements());
 
-        //  Automatische evaluatie genereren
+        // Automatisch evaluatieadvies genereren
         String advies = EvacuationHelper.generateEvaluationAdvice(
                 reportData.getPhase(),
                 reportData.getEvacuationTimeMinutes(),
                 reportData.getBuildingSize()
         );
 
-        //  Controleer of de oefening binnen richttijd viel
         boolean binnenTijd = EvacuationHelper.isWithinTimeLimit(
                 reportData.getPhase(),
                 reportData.getEvacuationTimeMinutes(),
@@ -110,7 +110,7 @@ public class EvacuationReportService {
         report.setObservations(updatedData.getObservations());
         report.setImprovements(updatedData.getImprovements());
 
-        //  Automatisch nieuw advies genereren
+        // Automatisch nieuw advies genereren
         String advies = EvacuationHelper.generateEvaluationAdvice(
                 updatedData.getPhase(),
                 updatedData.getEvacuationTimeMinutes(),

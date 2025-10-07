@@ -1,4 +1,4 @@
-package nl.novi.eindopdracht_cursusadministratie.service;
+package nl.novi.eindopdracht_cursusadministratie.service.user;
 
 import lombok.RequiredArgsConstructor;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
@@ -21,7 +21,6 @@ public class AdminService {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final RegistrationRepository registrationRepository;
-    private final EvacuationReportRepository evacuationReportRepository;
 
     // ================================================================
     //  GEBRUIKERSBEHEER
@@ -125,35 +124,5 @@ public class AdminService {
     /** Cursus verwijderen */
     public void deleteCourse(Long id) {
         courseRepository.deleteById(id);
-    }
-
-    // ================================================================
-    //  ONTRUIMINGSVERSLAGEN
-    // ================================================================
-
-    /** Alle verslagen ophalen */
-    public List<EvacuationReport> getAllEvacuationReports() {
-        return evacuationReportRepository.findAll();
-    }
-
-    /** Verslag goedkeuren */
-    public EvacuationReport approveEvacuationReport(Long id) {
-        EvacuationReport report = evacuationReportRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Evacuation report not found with id: " + id));
-        report.setStatus(ReportStatus.APPROVED);
-        return evacuationReportRepository.save(report);
-    }
-
-    /** Verslag afkeuren */
-    public EvacuationReport rejectEvacuationReport(Long id) {
-        EvacuationReport report = evacuationReportRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Evacuation report not found with id: " + id));
-        report.setStatus(ReportStatus.REJECTED);
-        return evacuationReportRepository.save(report);
-    }
-
-    /** Verslag verwijderen */
-    public void deleteEvacuationReport(Long id) {
-        evacuationReportRepository.deleteById(id);
     }
 }

@@ -1,9 +1,9 @@
-package nl.novi.eindopdracht_cursusadministratie.service;
+package nl.novi.eindopdracht_cursusadministratie.service.user;
 
 import lombok.RequiredArgsConstructor;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
-import nl.novi.eindopdracht_cursusadministratie.model.user.Cursist;
+import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.certificate.CertificateRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.registration.RegistrationRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.CursistRepository;
@@ -19,20 +19,19 @@ public class CursistService {
     private final RegistrationRepository registrationRepository;
     private final CertificateRepository certificateRepository;
 
-    //  Eigen gegevens ophalen
-    public Cursist getCursistById(Long id) {
+    // Eigen gegevens ophalen
+    public User getCursistById(Long id) {
         return cursistRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cursist not found with id: " + id));
     }
 
-    //  Certificaten van deze cursist ophalen
+    // Certificaten van deze cursist ophalen
     public List<Certificate> getCertificatesByCursist(Long cursistId) {
-        return certificateRepository.findByCursistId(cursistId);
+        return certificateRepository.findByStudent_Id(cursistId);
     }
 
-    //  Inschrijvingen van deze cursist ophalen
+    // Inschrijvingen van deze cursist ophalen
     public List<Registration> getRegistrationsByCursist(Long cursistId) {
-        return registrationRepository.findByCursistId(cursistId);
+        return registrationRepository.findByStudent_Id(cursistId);
     }
-
 }

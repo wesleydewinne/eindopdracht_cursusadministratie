@@ -19,9 +19,11 @@ public class Cursist extends User {
 
     private boolean active = true;
 
-    @OneToMany(mappedBy = "cursist", cascade = CascadeType.ALL)
+    // Owning side in Certificate is 'student'
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private List<Certificate> certificates = new ArrayList<>();
 
-    @OneToMany(mappedBy = "cursist", cascade = CascadeType.ALL)
+    // Owning side in Registration is 'student'
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private List<Registration> registrations = new ArrayList<>();
 }

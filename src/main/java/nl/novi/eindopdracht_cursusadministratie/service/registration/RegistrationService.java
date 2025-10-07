@@ -7,6 +7,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.registration.RegistrationS
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.registration.RegistrationRepository;
+import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -69,7 +70,7 @@ public class RegistrationService {
         return new RegistrationResponseDto(
                 registration.getId(),
                 registration.getCourse().getId(),
-                registration.getCourse().getTitle(),
+                registration.getCourse().getName(), // <-- FIX (was getTitle)
                 registration.getStudent().getId(),
                 registration.getStudent().getName(),
                 registration.getRegistrationDate(),
@@ -77,7 +78,6 @@ public class RegistrationService {
         );
     }
 
-    // DTO-versies van CRUD-methodes
     public List<RegistrationResponseDto> getAllRegistrationDtos() {
         return registrationRepository.findAll().stream()
                 .map(this::toDto)
