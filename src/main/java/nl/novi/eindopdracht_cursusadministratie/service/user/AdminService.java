@@ -2,10 +2,13 @@ package nl.novi.eindopdracht_cursusadministratie.service;
 
 import lombok.RequiredArgsConstructor;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
+import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
+import nl.novi.eindopdracht_cursusadministratie.model.report.ReportStatus;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Role;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.registration.RegistrationRepository;
+import nl.novi.eindopdracht_cursusadministratie.repository.report.EvacuationReportRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,9 +21,10 @@ public class AdminService {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final RegistrationRepository registrationRepository;
+    private final EvacuationReportRepository evacuationReportRepository;
 
     // ================================================================
-    // 🔹 GEBRUIKERSBEHEER
+    //  GEBRUIKERSBEHEER
     // ================================================================
 
     /** Alle gebruikers ophalen */
@@ -80,7 +84,7 @@ public class AdminService {
     }
 
     // ================================================================
-    // 🔹 INSCHRIJVINGSBEHEER
+    //  INSCHRIJVINGSBEHEER
     // ================================================================
 
     /** Inschrijving verwijderen (door Admin) */
@@ -89,7 +93,7 @@ public class AdminService {
     }
 
     // ================================================================
-    // 🔹 CURSUSBEHEER
+    //  CURSUSBEHEER
     // ================================================================
 
     /** Alle cursussen ophalen */
@@ -121,5 +125,35 @@ public class AdminService {
     /** Cursus verwijderen */
     public void deleteCourse(Long id) {
         courseRepository.deleteById(id);
+    }
+
+    // ================================================================
+    //  ONTRUIMINGSVERSLAGEN
+    // ================================================================
+
+    /** Alle verslagen ophalen */
+    public List<EvacuationReport> getAllEvacuationReports() {
+        return evacuationReportRepository.findAll();
+    }
+
+    /** Verslag goedkeuren */
+    public EvacuationReport approveEvacuationReport(Long id) {
+        EvacuationReport report = evacuationReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Evacuation report not found with id: " + id));
+        report.setStatus(ReportStatus.APPROVED);
+        return evacuationReportRepository.save(report);
+    }
+
+    /** Verslag afkeuren */
+    public EvacuationReport rejectEvacuationReport(Long id) {
+        EvacuationReport report = evacuationReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Evacuation report not found with id: " + id));
+        report.setStatus(ReportStatus.REJECTED);
+        return evacuationReportRepository.save(report);
+    }
+
+    /** Verslag verwijderen */
+    public void deleteEvacuationReport(Long id) {
+        evacuationReportRepository.deleteById(id);
     }
 }

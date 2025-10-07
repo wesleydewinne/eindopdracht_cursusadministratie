@@ -1,9 +1,10 @@
-package nl.novi.eindopdracht_cursusadministratie.controller;
+package nl.novi.eindopdracht_cursusadministratie.controller.user;
 
 import lombok.RequiredArgsConstructor;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.service.AdminService;
+import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class AdminController {
     private final AdminService adminService;
 
     // ================================================================
-    // 🔹 GEBRUIKERSBEHEER (ALGEMEEN)
+    //  GEBRUIKERSBEHEER (ALGEMEEN)
     // ================================================================
 
     /** Alle gebruikers ophalen (ongeacht rol) */
@@ -39,7 +40,7 @@ public class AdminController {
     }
 
     // ================================================================
-    // 🔹 CURSISTENBEHEER
+    //  CURSISTENBEHEER
     // ================================================================
 
     /** Alle cursisten ophalen */
@@ -61,7 +62,7 @@ public class AdminController {
     }
 
     // ================================================================
-    // 🔹 TRAINERSBEHEER
+    //  TRAINERSBEHEER
     // ================================================================
 
     /** Alle trainers ophalen */
@@ -83,7 +84,7 @@ public class AdminController {
     }
 
     // ================================================================
-    // 🔹 CURSUSBEHEER
+    //  CURSUSBEHEER
     // ================================================================
 
     /** Alle cursussen ophalen */
@@ -112,13 +113,37 @@ public class AdminController {
     }
 
     // ================================================================
-    // 🔹 INSCHRIJVINGSBEHEER
+    //  INSCHRIJVINGSBEHEER
     // ================================================================
 
     /** Inschrijving verwijderen (door Admin) */
     @DeleteMapping("/registrations/{id}")
     public ResponseEntity<Void> deleteRegistration(@PathVariable Long id) {
         adminService.deleteRegistration(id);
+        return ResponseEntity.noContent().build();
+    }
+    // ================================================================
+    //  ONTRUIMINGSVERSLAGEN
+    // ================================================================
+
+    @GetMapping("/evacuation-reports")
+    public ResponseEntity<List<EvacuationReport>> getAllEvacuationReports() {
+        return ResponseEntity.ok(adminService.getAllEvacuationReports());
+    }
+
+    @PutMapping("/evacuation-reports/{id}/approve")
+    public ResponseEntity<EvacuationReport> approveEvacuationReport(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.approveEvacuationReport(id));
+    }
+
+    @PutMapping("/evacuation-reports/{id}/reject")
+    public ResponseEntity<EvacuationReport> rejectEvacuationReport(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.rejectEvacuationReport(id));
+    }
+
+    @DeleteMapping("/evacuation-reports/{id}")
+    public ResponseEntity<Void> deleteEvacuationReport(@PathVariable Long id) {
+        adminService.deleteEvacuationReport(id);
         return ResponseEntity.noContent().build();
     }
 }

@@ -5,7 +5,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
-import nl.novi.eindopdracht_cursusadministratie.service.TrainerService;
+import nl.novi.eindopdracht_cursusadministratie.service.user.TrainerService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -75,5 +75,31 @@ public class TrainerController {
     @GetMapping("/{id}/certificates")
     public ResponseEntity<List<Certificate>> getCertificatesByTrainer(@PathVariable Long id) {
         return ResponseEntity.ok(trainerService.getCertificatesByTrainer(id));
+    }
+
+    // ================================================================
+    //  ONTRUIMINGSVERSLAGEN (toevoegen in volgende commit)
+    // ================================================================
+
+    /** Eigen verslagen ophalen */
+    @GetMapping("/{trainerId}/evacuation-reports")
+    public ResponseEntity<List<EvacuationReport>> getReportsByTrainer(@PathVariable Long trainerId) {
+        return ResponseEntity.ok(trainerService.getReportsByTrainer(trainerId));
+    }
+
+    /** Nieuw verslag aanmaken */
+    @PostMapping("/{trainerId}/evacuation-reports")
+    public ResponseEntity<EvacuationReport> createEvacuationReport(
+            @PathVariable Long trainerId,
+            @RequestBody EvacuationReport report) {
+        return ResponseEntity.ok(trainerService.createEvacuationReport(report));
+    }
+
+    /** Verslag bijwerken (alleen als nog niet goedgekeurd) */
+    @PutMapping("/evacuation-reports/{id}")
+    public ResponseEntity<EvacuationReport> updateEvacuationReport(
+            @PathVariable Long id,
+            @RequestBody EvacuationReport updatedReport) {
+        return ResponseEntity.ok(trainerService.updateEvacuationReport(id, updatedReport));
     }
 }
