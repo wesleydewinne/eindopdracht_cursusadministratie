@@ -11,7 +11,8 @@ import java.util.List;
 
 /**
  * Controller voor alle beheerfunctionaliteiten.
- * De Admin kan gebruikers (trainers & cursisten) en cursussen beheren.
+ * De Admin heeft toegang tot het beheren van gebruikers (trainers & cursisten),
+ * cursussen en inschrijvingen.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -21,7 +22,7 @@ public class AdminController {
     private final AdminService adminService;
 
     // ================================================================
-    //  GEBRUIKERSBEHEER
+    // 🔹 GEBRUIKERSBEHEER (ALGEMEEN)
     // ================================================================
 
     /** Alle gebruikers ophalen (ongeacht rol) */
@@ -38,7 +39,7 @@ public class AdminController {
     }
 
     // ================================================================
-    //  cursisten
+    // 🔹 CURSISTENBEHEER
     // ================================================================
 
     /** Alle cursisten ophalen */
@@ -58,8 +59,9 @@ public class AdminController {
     public ResponseEntity<User> updateCursist(@PathVariable Long id, @RequestBody User updatedCursist) {
         return ResponseEntity.ok(adminService.updateCursist(id, updatedCursist));
     }
+
     // ================================================================
-    //  Trainers
+    // 🔹 TRAINERSBEHEER
     // ================================================================
 
     /** Alle trainers ophalen */
@@ -80,10 +82,8 @@ public class AdminController {
         return ResponseEntity.ok(adminService.updateTrainer(id, updatedTrainer));
     }
 
-
-
     // ================================================================
-    //  CURSUSBEHEER
+    // 🔹 CURSUSBEHEER
     // ================================================================
 
     /** Alle cursussen ophalen */
@@ -108,6 +108,17 @@ public class AdminController {
     @DeleteMapping("/courses/{id}")
     public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
         adminService.deleteCourse(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ================================================================
+    // 🔹 INSCHRIJVINGSBEHEER
+    // ================================================================
+
+    /** Inschrijving verwijderen (door Admin) */
+    @DeleteMapping("/registrations/{id}")
+    public ResponseEntity<Void> deleteRegistration(@PathVariable Long id) {
+        adminService.deleteRegistration(id);
         return ResponseEntity.noContent().build();
     }
 }
