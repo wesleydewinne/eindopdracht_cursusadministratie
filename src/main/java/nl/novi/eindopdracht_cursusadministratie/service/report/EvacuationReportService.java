@@ -2,7 +2,7 @@ package nl.novi.eindopdracht_cursusadministratie.service.report;
 
 import nl.novi.eindopdracht_cursusadministratie.helper.EvacuationHelper;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
-import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationPhase;
+import nl.novi.eindopdracht_cursusadministratie.model.course.TrainingType;
 import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
 import nl.novi.eindopdracht_cursusadministratie.model.report.ReportStatus;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
@@ -30,7 +30,7 @@ public class EvacuationReportService {
         this.userRepository = userRepository;
     }
 
-    //  Alle verslagen ophalen (admin)
+    //  Alle verslagen ophalen (alleen admin)
     public List<EvacuationReport> getAllReports() {
         return reportRepository.findAll();
     }
@@ -51,13 +51,18 @@ public class EvacuationReportService {
                 .orElseThrow(() -> new IllegalArgumentException("Evacuatieverslag niet gevonden met ID: " + id));
     }
 
-    //  Verslag aanmaken door trainer
+    //  Nieuw verslag aanmaken door trainer
     public EvacuationReport createReport(Long courseId, Long trainerId, EvacuationReport reportData) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("Cursus niet gevonden met ID: " + courseId));
 
         User trainer = userRepository.findById(trainerId)
                 .orElseThrow(() -> new IllegalArgumentException("Trainer niet gevonden met ID: " + trainerId));
+
+        // Alleen ontruimingsoefeningen mogen een verslag hebben
+        if (course.getType() != TrainingType.ONTRUIMINGSOEFENING) {
+            throw new IllegalArgumentException("Verslagen kunnen alleen worden gemaakt voor ontruimingsoefeningen.");
+        }
 
         EvacuationReport report = new EvacuationReport();
         report.setCourse(course);
@@ -67,19 +72,32 @@ public class EvacuationReportService {
         report.setBuildingSize(reportData.getBuildingSize());
         report.setObservations(reportData.getObservations());
         report.setImprovements(reportData.getImprovements());
-        report.setEvaluationAdvice(
-                EvacuationHelper.generateEvaluationAdvice(
-                        reportData.getPhase(),
-                        reportData.getEvacuationTimeMinutes(),
-                        reportData.getBuildingSize()
-                )
+
+        //  Automatische evaluatie genereren
+        String advies = EvacuationHelper.generateEvaluationAdvice(
+                reportData.getPhase(),
+                reportData.getEvacuationTimeMinutes(),
+                reportData.getBuildingSize()
         );
+
+        //  Controleer of de oefening binnen richttijd viel
+        boolean binnenTijd = EvacuationHelper.isWithinTimeLimit(
+                reportData.getPhase(),
+                reportData.getEvacuationTimeMinutes(),
+                reportData.getBuildingSize()
+        );
+
+        if (!binnenTijd) {
+            advies += " (Let op: evacuatie duurde langer dan de richttijd)";
+        }
+
+        report.setEvaluationAdvice(advies);
         report.setStatus(ReportStatus.PENDING);
 
         return reportRepository.save(report);
     }
 
-    //  Verslag bijwerken (trainer of admin zolang status = PENDING)
+    //  Verslag bijwerken zolang status = PENDING
     public EvacuationReport updateReport(Long id, EvacuationReport updatedData) {
         EvacuationReport report = getReportById(id);
 
@@ -92,14 +110,25 @@ public class EvacuationReportService {
         report.setBuildingSize(updatedData.getBuildingSize());
         report.setObservations(updatedData.getObservations());
         report.setImprovements(updatedData.getImprovements());
-        report.setEvaluationAdvice(
-                EvacuationHelper.generateEvaluationAdvice(
-                        updatedData.getPhase(),
-                        updatedData.getEvacuationTimeMinutes(),
-                        updatedData.getBuildingSize()
-                )
+
+        //  Automatisch nieuw advies genereren
+        String advies = EvacuationHelper.generateEvaluationAdvice(
+                updatedData.getPhase(),
+                updatedData.getEvacuationTimeMinutes(),
+                updatedData.getBuildingSize()
         );
 
+        boolean binnenTijd = EvacuationHelper.isWithinTimeLimit(
+                updatedData.getPhase(),
+                updatedData.getEvacuationTimeMinutes(),
+                updatedData.getBuildingSize()
+        );
+
+        if (!binnenTijd) {
+            advies += " (Let op: evacuatie duurde langer dan de richttijd)";
+        }
+
+        report.setEvaluationAdvice(advies);
         return reportRepository.save(report);
     }
 

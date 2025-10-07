@@ -33,7 +33,7 @@ public class EvacuationReport {
     @Enumerated(EnumType.STRING)
     private EvacuationPhase phase;
 
-    private double evacuationTimeMinutes;
+    private int evacuationTimeMinutes;
     private String buildingSize;
 
     private String observations;
