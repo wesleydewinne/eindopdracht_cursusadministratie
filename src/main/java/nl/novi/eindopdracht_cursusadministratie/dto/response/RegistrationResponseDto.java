@@ -1,5 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.dto.response;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,11 +12,11 @@ import java.time.LocalDate;
 @Setter
 @AllArgsConstructor
 public class RegistrationResponseDto {
-    private Long id;
-    private Long courseId;
-    private String courseTitle;
-    private Long studentId;
-    private String studentName;
-    private LocalDate registrationDate;
-    private RegistrationStatus status;
+    @NotNull private Long id;
+    @NotNull private Long courseId;
+    @NotNull private String courseTitle;
+    @NotNull private Long studentId;
+    @NotNull private String studentName;
+    @NotNull private LocalDate registrationDate;
+    @NotNull private RegistrationStatus status;
 }

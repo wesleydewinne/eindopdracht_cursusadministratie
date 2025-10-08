@@ -1,6 +1,8 @@
 package nl.novi.eindopdracht_cursusadministratie.model.course;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -22,8 +24,12 @@ public class Course {
 
     private String name;
     private String description;
+
+    @Future(message = "De startdatum moet in de toekomst liggen")
     private LocalDate startDate;
     private LocalDate endDate;
+
+    @Positive(message = "Het maximum aantal deelnemers moet positief zijn")
     private Integer maxParticipants;
 
     @Enumerated(EnumType.STRING)
