@@ -1,5 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.controller.registration;
 
+import jakarta.validation.Valid;
 import nl.novi.eindopdracht_cursusadministratie.dto.registration.CreateRegistrationDto;
 import nl.novi.eindopdracht_cursusadministratie.dto.response.RegistrationResponseDto;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.RegistrationStatus;
@@ -33,7 +34,7 @@ public class RegistrationController {
 
     //  Nieuwe inschrijving aanmaken (met JSON-body)
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public RegistrationResponseDto createRegistration(@RequestBody CreateRegistrationDto dto) {
+    public RegistrationResponseDto createRegistration(@Valid @RequestBody CreateRegistrationDto dto) {
         return registrationService.createRegistrationDto(dto.getCourseId(), dto.getStudentId());
     }
 

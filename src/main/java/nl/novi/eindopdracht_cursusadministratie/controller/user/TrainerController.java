@@ -1,5 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.controller.user;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import nl.novi.eindopdracht_cursusadministratie.dto.certificate.GenerateCertificateRequest;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
@@ -75,7 +76,7 @@ public class TrainerController {
      * Ontvangt alleen de minimale gegevens via GenerateCertificateRequest.
      */
     @PostMapping("/certificates")
-    public ResponseEntity<Certificate> generateCertificate(@RequestBody GenerateCertificateRequest req) {
+    public ResponseEntity<Certificate> generateCertificate(@Valid @RequestBody GenerateCertificateRequest req) {
         Certificate createdCertificate = trainerService.generateCertificate(
                 req.courseId(),
                 req.studentId(),
