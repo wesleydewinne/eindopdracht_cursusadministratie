@@ -10,6 +10,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.registration.RegistrationRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,8 @@ public class AdminService {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final RegistrationRepository registrationRepository;
+
+    private final PasswordEncoder passwordEncoder;
 
     // ================================================================
     //  GEBRUIKERSBEHEER
@@ -43,15 +46,25 @@ public class AdminService {
         return userRepository.findByRole(Role.CURSIST);
     }
 
-    /** Nieuwe trainer aanmaken */
+    /** Nieuwe trainer aanmaken (met versleuteld wachtwoord) */
     public User createTrainer(User trainer) {
         trainer.setRole(Role.TRAINER);
+
+        if (trainer.getPassword() != null && !trainer.getPassword().isBlank()) {
+            trainer.setPassword(passwordEncoder.encode(trainer.getPassword()));
+        }
+
         return userRepository.save(trainer);
     }
 
-    /** Nieuwe cursist aanmaken */
+    /** Nieuwe cursist aanmaken (met versleuteld wachtwoord) */
     public User createCursist(User cursist) {
         cursist.setRole(Role.CURSIST);
+
+        if (cursist.getPassword() != null && !cursist.getPassword().isBlank()) {
+            cursist.setPassword(passwordEncoder.encode(cursist.getPassword()));
+        }
+
         return userRepository.save(cursist);
     }
 
@@ -61,6 +74,11 @@ public class AdminService {
         existing.setName(updatedTrainer.getName());
         existing.setEmail(updatedTrainer.getEmail());
         existing.setRole(Role.TRAINER);
+
+        if (updatedTrainer.getPassword() != null && !updatedTrainer.getPassword().isBlank()) {
+            existing.setPassword(passwordEncoder.encode(updatedTrainer.getPassword()));
+        }
+
         return userRepository.save(existing);
     }
 
@@ -70,6 +88,11 @@ public class AdminService {
         existing.setName(updatedCursist.getName());
         existing.setEmail(updatedCursist.getEmail());
         existing.setRole(Role.CURSIST);
+
+        if (updatedCursist.getPassword() != null && !updatedCursist.getPassword().isBlank()) {
+            existing.setPassword(passwordEncoder.encode(updatedCursist.getPassword()));
+        }
+
         return userRepository.save(existing);
     }
 
