@@ -13,8 +13,10 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     List<Registration> findByStudent_Id(Long studentId);
 
     // Alle inschrijvingen voor een specifieke cursus
+    @SuppressWarnings("unused")
     List<Registration> findByCourse_Id(Long courseId);
 
     // Optioneel: inschrijving van een specifieke cursist voor een specifieke cursus
+    @SuppressWarnings("unused")
     List<Registration> findByCourse_IdAndStudent_Id(Long courseId, Long studentId);
 }

@@ -9,6 +9,7 @@ import java.util.List;
 public interface EvacuationReportRepository extends JpaRepository<EvacuationReport, Long> {
 
     // Alle verslagen van een specifieke trainer ophalen
+    @SuppressWarnings("unused")
     List<EvacuationReport> findByCreatedById(Long trainerId);
 
     // Alle verslagen van een specifieke cursus ophalen
@@ -18,5 +19,6 @@ public interface EvacuationReportRepository extends JpaRepository<EvacuationRepo
     List<EvacuationReport> findByCourseIdAndVisibleForStudentsTrue(Long courseId);
 
     // Verslagen filteren op status (bijv. PENDING, APPROVED, REJECTED)
+    @SuppressWarnings("unused")
     List<EvacuationReport> findByStatus(ReportStatus status);
 }
