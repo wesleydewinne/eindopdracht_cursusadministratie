@@ -1,6 +1,9 @@
 package nl.novi.eindopdracht_cursusadministratie.service.report;
 
-import nl.novi.eindopdracht_cursusadministratie.helper.EvacuationHelper;
+import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.EvacuationReportNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.TrainerNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.UserNotFoundException;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.course.TrainingType;
 import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
@@ -13,6 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import static nl.novi.eindopdracht_cursusadministratie.helper.EntityFinderHelper.findEntityById;
+import static nl.novi.eindopdracht_cursusadministratie.helper.EvacuationReportHelper.applyReportDetails;
+
 @Service
 public class EvacuationReportService {
 
@@ -20,122 +26,83 @@ public class EvacuationReportService {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
 
-    public EvacuationReportService(
-            EvacuationReportRepository reportRepository,
-            CourseRepository courseRepository,
-            UserRepository userRepository
-    ) {
+    public EvacuationReportService(EvacuationReportRepository reportRepository,
+                                   CourseRepository courseRepository,
+                                   UserRepository userRepository) {
         this.reportRepository = reportRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
     }
 
-    //  Alle verslagen ophalen (alleen admin)
+    // ============================================================
+    // BASIS CRUD
+    // ============================================================
+
     public List<EvacuationReport> getAllReports() {
         return reportRepository.findAll();
     }
 
-    //  Alle verslagen van één cursus
     public List<EvacuationReport> getReportsByCourse(Long courseId) {
         return reportRepository.findByCourseId(courseId);
     }
 
-    //  Verslagen die zichtbaar zijn voor cursisten
     public List<EvacuationReport> getVisibleReports(Long courseId) {
         return reportRepository.findByCourseIdAndVisibleForStudentsTrue(courseId);
     }
 
-    //  Verslag ophalen op ID
     public EvacuationReport getReportById(Long id) {
-        return reportRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Evacuatieverslag niet gevonden met ID: " + id));
+        return findEntityById(id, reportRepository, new EvacuationReportNotFoundException(id));
     }
 
-    //  Nieuw verslag aanmaken door trainer
-    public EvacuationReport createReport(Long courseId, Long trainerId, EvacuationReport reportData) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException("Cursus niet gevonden met ID: " + courseId));
+    public void deleteReport(Long id) {
+        if (!reportRepository.existsById(id)) {
+            throw new EvacuationReportNotFoundException(id);
+        }
+        reportRepository.deleteById(id);
+    }
 
-        User trainer = userRepository.findById(trainerId)
-                .orElseThrow(() -> new IllegalArgumentException("Trainer niet gevonden met ID: " + trainerId));
+    // ============================================================
+    // CREATE & UPDATE
+    // ============================================================
+
+    public EvacuationReport createReport(Long courseId, Long trainerId, EvacuationReport reportData) {
+        Course course = findEntityById(courseId, courseRepository, new CourseNotFoundException(courseId));
+        User trainer = findEntityById(trainerId, userRepository, new TrainerNotFoundException(trainerId));
 
         // Alleen ontruimingsoefeningen mogen een verslag hebben
         if (course.getType() != TrainingType.ONTRUIMINGSOEFENING) {
-            throw new IllegalArgumentException("Verslagen kunnen alleen worden gemaakt voor ontruimingsoefeningen.");
+            throw new IllegalStateException("Verslagen kunnen alleen worden gemaakt voor ontruimingsoefeningen.");
         }
 
         EvacuationReport report = new EvacuationReport();
         report.setCourse(course);
         report.setCreatedBy(trainer);
-        report.setPhase(reportData.getPhase());
-        report.setEvacuationTimeMinutes(reportData.getEvacuationTimeMinutes());
-        report.setBuildingSize(reportData.getBuildingSize());
-        report.setObservations(reportData.getObservations());
-        report.setImprovements(reportData.getImprovements());
-
-        // Automatisch evaluatieadvies genereren
-        String advies = EvacuationHelper.generateEvaluationAdvice(
-                reportData.getPhase(),
-                reportData.getEvacuationTimeMinutes(),
-                reportData.getBuildingSize()
-        );
-
-        boolean binnenTijd = EvacuationHelper.isWithinTimeLimit(
-                reportData.getPhase(),
-                reportData.getEvacuationTimeMinutes(),
-                reportData.getBuildingSize()
-        );
-
-        if (!binnenTijd) {
-            advies += " (Let op: evacuatie duurde langer dan de richttijd)";
-        }
-
-        report.setEvaluationAdvice(advies);
         report.setStatus(ReportStatus.PENDING);
+
+        applyReportDetails(report, reportData);
 
         return reportRepository.save(report);
     }
 
-    //  Verslag bijwerken zolang status = PENDING
     public EvacuationReport updateReport(Long id, EvacuationReport updatedData) {
-        EvacuationReport report = getReportById(id);
+        EvacuationReport report = findEntityById(id, reportRepository, new EvacuationReportNotFoundException(id));
 
         if (report.getStatus() != ReportStatus.PENDING) {
             throw new IllegalStateException("Verslag kan niet meer worden aangepast na goedkeuring of afkeuring.");
         }
 
-        report.setPhase(updatedData.getPhase());
-        report.setEvacuationTimeMinutes(updatedData.getEvacuationTimeMinutes());
-        report.setBuildingSize(updatedData.getBuildingSize());
-        report.setObservations(updatedData.getObservations());
-        report.setImprovements(updatedData.getImprovements());
+        applyReportDetails(report, updatedData);
 
-        // Automatisch nieuw advies genereren
-        String advies = EvacuationHelper.generateEvaluationAdvice(
-                updatedData.getPhase(),
-                updatedData.getEvacuationTimeMinutes(),
-                updatedData.getBuildingSize()
-        );
-
-        boolean binnenTijd = EvacuationHelper.isWithinTimeLimit(
-                updatedData.getPhase(),
-                updatedData.getEvacuationTimeMinutes(),
-                updatedData.getBuildingSize()
-        );
-
-        if (!binnenTijd) {
-            advies += " (Let op: evacuatie duurde langer dan de richttijd)";
-        }
-
-        report.setEvaluationAdvice(advies);
         return reportRepository.save(report);
     }
 
-    //  Verslag goedkeuren door admin
+    // ============================================================
+    // ADMIN ACTIES (goedkeuren / afkeuren)
+    // ============================================================
+
     public EvacuationReport approveReport(Long id, Long adminId) {
-        EvacuationReport report = getReportById(id);
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Beheerder niet gevonden met ID: " + adminId));
+        EvacuationReport report = findEntityById(id, reportRepository, new EvacuationReportNotFoundException(id));
+        User admin = findEntityById(adminId, userRepository, new UserNotFoundException(adminId));
 
         report.setStatus(ReportStatus.APPROVED);
         report.setApprovedBy(admin);
@@ -144,11 +111,9 @@ public class EvacuationReportService {
         return reportRepository.save(report);
     }
 
-    //  Verslag afkeuren door admin
     public EvacuationReport rejectReport(Long id, Long adminId, String remarks) {
-        EvacuationReport report = getReportById(id);
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Beheerder niet gevonden met ID: " + adminId));
+        EvacuationReport report = findEntityById(id, reportRepository, new EvacuationReportNotFoundException(id));
+        User admin = findEntityById(adminId, userRepository, new UserNotFoundException(adminId));
 
         report.setStatus(ReportStatus.REJECTED);
         report.setApprovedBy(admin);
@@ -156,10 +121,5 @@ public class EvacuationReportService {
         report.setEvaluationAdvice("Afgekeurd: " + remarks);
 
         return reportRepository.save(report);
-    }
-
-    //  Verslag verwijderen (alleen admin)
-    public void deleteReport(Long id) {
-        reportRepository.deleteById(id);
     }
 }

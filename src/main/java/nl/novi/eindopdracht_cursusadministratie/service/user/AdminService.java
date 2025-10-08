@@ -1,18 +1,20 @@
 package nl.novi.eindopdracht_cursusadministratie.service.user;
 
 import lombok.RequiredArgsConstructor;
+import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.CursistNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.TrainerNotFoundException;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
-import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
-import nl.novi.eindopdracht_cursusadministratie.model.report.ReportStatus;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Role;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.registration.RegistrationRepository;
-import nl.novi.eindopdracht_cursusadministratie.repository.report.EvacuationReportRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+
+import static nl.novi.eindopdracht_cursusadministratie.helper.EntityFinderHelper.findEntityById;
 
 @Service
 @RequiredArgsConstructor
@@ -55,30 +57,27 @@ public class AdminService {
 
     /** Trainer bijwerken */
     public User updateTrainer(Long id, User updatedTrainer) {
-        return userRepository.findById(id)
-                .map(trainer -> {
-                    trainer.setName(updatedTrainer.getName());
-                    trainer.setEmail(updatedTrainer.getEmail());
-                    trainer.setRole(Role.TRAINER); // Rol blijft TRAINER
-                    return userRepository.save(trainer);
-                })
-                .orElseThrow(() -> new RuntimeException("Trainer not found with id: " + id));
+        User existing = findEntityById(id, userRepository, new TrainerNotFoundException(id));
+        existing.setName(updatedTrainer.getName());
+        existing.setEmail(updatedTrainer.getEmail());
+        existing.setRole(Role.TRAINER);
+        return userRepository.save(existing);
     }
 
     /** Cursist bijwerken */
     public User updateCursist(Long id, User updatedCursist) {
-        return userRepository.findById(id)
-                .map(cursist -> {
-                    cursist.setName(updatedCursist.getName());
-                    cursist.setEmail(updatedCursist.getEmail());
-                    cursist.setRole(Role.CURSIST); // Rol blijft CURSIST
-                    return userRepository.save(cursist);
-                })
-                .orElseThrow(() -> new RuntimeException("Cursist not found with id: " + id));
+        User existing = findEntityById(id, userRepository, new CursistNotFoundException(id));
+        existing.setName(updatedCursist.getName());
+        existing.setEmail(updatedCursist.getEmail());
+        existing.setRole(Role.CURSIST);
+        return userRepository.save(existing);
     }
 
     /** Gebruiker verwijderen (trainer of cursist) */
     public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
         userRepository.deleteById(id);
     }
 
@@ -88,6 +87,9 @@ public class AdminService {
 
     /** Inschrijving verwijderen (door Admin) */
     public void deleteRegistration(Long registrationId) {
+        if (!registrationRepository.existsById(registrationId)) {
+            throw new RuntimeException("Registration not found with id: " + registrationId);
+        }
         registrationRepository.deleteById(registrationId);
     }
 
@@ -107,22 +109,22 @@ public class AdminService {
 
     /** Bestaande cursus bijwerken (locatie, trainer, data, etc.) */
     public Course updateCourse(Long id, Course updatedCourse) {
-        return courseRepository.findById(id)
-                .map(course -> {
-                    course.setName(updatedCourse.getName());
-                    course.setDescription(updatedCourse.getDescription());
-                    course.setStartDate(updatedCourse.getStartDate());
-                    course.setEndDate(updatedCourse.getEndDate());
-                    course.setLocation(updatedCourse.getLocation());
-                    course.setMaxParticipants(updatedCourse.getMaxParticipants());
-                    course.setTrainer(updatedCourse.getTrainer());
-                    return courseRepository.save(course);
-                })
-                .orElseThrow(() -> new RuntimeException("Course not found with id: " + id));
+        Course existing = findEntityById(id, courseRepository, new CourseNotFoundException(id));
+        existing.setName(updatedCourse.getName());
+        existing.setDescription(updatedCourse.getDescription());
+        existing.setStartDate(updatedCourse.getStartDate());
+        existing.setEndDate(updatedCourse.getEndDate());
+        existing.setLocation(updatedCourse.getLocation());
+        existing.setMaxParticipants(updatedCourse.getMaxParticipants());
+        existing.setTrainer(updatedCourse.getTrainer());
+        return courseRepository.save(existing);
     }
 
     /** Cursus verwijderen */
     public void deleteCourse(Long id) {
+        if (!courseRepository.existsById(id)) {
+            throw new CourseNotFoundException(id);
+        }
         courseRepository.deleteById(id);
     }
 }

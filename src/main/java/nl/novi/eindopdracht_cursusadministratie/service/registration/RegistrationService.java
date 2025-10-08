@@ -1,6 +1,9 @@
 package nl.novi.eindopdracht_cursusadministratie.service.registration;
 
 import nl.novi.eindopdracht_cursusadministratie.dto.response.RegistrationResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.CursistNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.RegistrationNotFoundException;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.RegistrationStatus;
@@ -12,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+
+import static nl.novi.eindopdracht_cursusadministratie.helper.EntityFinderHelper.findEntityById;
 
 @Service
 public class RegistrationService {
@@ -28,21 +33,33 @@ public class RegistrationService {
         this.userRepository = userRepository;
     }
 
+    // ============================================================
+    // BASIS CRUD
+    // ============================================================
+
+    @SuppressWarnings("unused")
     public List<Registration> getAllRegistrations() {
         return registrationRepository.findAll();
     }
 
     public Registration getRegistrationById(Long id) {
-        return registrationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Registration not found with ID: " + id));
+        return findEntityById(id, registrationRepository, new RegistrationNotFoundException(id));
     }
 
-    public Registration createRegistration(Long courseId, Long studentId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + courseId));
+    public void deleteRegistration(Long id) {
+        if (!registrationRepository.existsById(id)) {
+            throw new RegistrationNotFoundException(id);
+        }
+        registrationRepository.deleteById(id);
+    }
 
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Student not found with ID: " + studentId));
+    // ============================================================
+    // CREATE & UPDATE
+    // ============================================================
+
+    public Registration createRegistration(Long courseId, Long studentId) {
+        Course course = findEntityById(courseId, courseRepository, new CourseNotFoundException(courseId));
+        User student = findEntityById(studentId, userRepository, new CursistNotFoundException(studentId));
 
         Registration registration = new Registration();
         registration.setCourse(course);
@@ -54,23 +71,20 @@ public class RegistrationService {
     }
 
     public Registration updateRegistrationStatus(Long id, RegistrationStatus status) {
-        Registration registration = getRegistrationById(id);
+        Registration registration = findEntityById(id, registrationRepository, new RegistrationNotFoundException(id));
         registration.setStatus(status);
         return registrationRepository.save(registration);
     }
 
-    public void deleteRegistration(Long id) {
-        if (!registrationRepository.existsById(id)) {
-            throw new IllegalArgumentException("Registration not found with ID: " + id);
-        }
-        registrationRepository.deleteById(id);
-    }
+    // ============================================================
+    // DTO-CONVERSIES
+    // ============================================================
 
     private RegistrationResponseDto toDto(Registration registration) {
         return new RegistrationResponseDto(
                 registration.getId(),
                 registration.getCourse().getId(),
-                registration.getCourse().getName(), // <-- FIX (was getTitle)
+                registration.getCourse().getName(),
                 registration.getStudent().getId(),
                 registration.getStudent().getName(),
                 registration.getRegistrationDate(),

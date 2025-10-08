@@ -1,5 +1,8 @@
 package nl.novi.eindopdracht_cursusadministratie.service.certificate;
 
+import nl.novi.eindopdracht_cursusadministratie.exception.CertificateNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.CursistNotFoundException;
 import nl.novi.eindopdracht_cursusadministratie.helper.CertificateNumberHelper;
 import nl.novi.eindopdracht_cursusadministratie.helper.DateHelper;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
@@ -35,15 +38,15 @@ public class CertificateService {
 
     public Certificate getCertificateById(Long id) {
         return certificateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Certificate not found with ID: " + id));
+                .orElseThrow(() -> new CertificateNotFoundException(id));
     }
 
     public Certificate createCertificate(Long studentId, Long courseId) {
         User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Student not found with ID: " + studentId));
+                .orElseThrow(() -> new CursistNotFoundException(studentId));
 
         Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + courseId));
+                .orElseThrow(() -> new CourseNotFoundException(courseId));
 
         if (course.getType() == TrainingType.ONTRUIMINGSOEFENING) {
             throw new IllegalArgumentException("No certificate is issued for evacuation drills.");
@@ -54,7 +57,7 @@ public class CertificateService {
         certificate.setCertificateNumber(CertificateNumberHelper.generateCertificateNumber());
         certificate.setIssueDate(today);
         certificate.setExpiryDate(DateHelper.calculateExpiryDate(today, course.getType()));
-        certificate.setIssuedBy("Safety First BV");
+        certificate.setIssuedBy("BHV Training");
         certificate.setStudent(student);
         certificate.setCourse(course);
 
