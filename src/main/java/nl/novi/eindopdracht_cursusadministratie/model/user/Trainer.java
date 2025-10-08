@@ -16,7 +16,7 @@ import java.util.List;
 @DiscriminatorValue("TRAINER")
 public class Trainer extends User {
 
-    private String expertise; // bv. BHV, EHBO, Ontruimingsoefeningen
+    private String expertise;
 
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL)
     private List<Course> courses = new ArrayList<>();
