@@ -6,6 +6,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Cursist;
 import nl.novi.eindopdracht_cursusadministratie.service.user.CursistService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/cursisten")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('CURSIST')")
 public class CursistController {
 
     private final CursistService cursistService;

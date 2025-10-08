@@ -9,6 +9,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
 import nl.novi.eindopdracht_cursusadministratie.service.user.TrainerService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/trainers")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('TRAINER')")
 public class TrainerController {
 
     private final TrainerService trainerService;

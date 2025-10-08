@@ -5,6 +5,7 @@ import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.service.user.AdminService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('Admin')")
 public class AdminController {
 
     private final AdminService adminService;
