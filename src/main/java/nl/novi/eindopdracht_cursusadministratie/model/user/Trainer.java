@@ -12,7 +12,6 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @DiscriminatorValue("TRAINER")
 public class Trainer extends User {
 

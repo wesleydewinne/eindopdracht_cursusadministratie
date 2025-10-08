@@ -13,7 +13,6 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @DiscriminatorValue("CURSIST")
 public class Cursist extends User {
 
