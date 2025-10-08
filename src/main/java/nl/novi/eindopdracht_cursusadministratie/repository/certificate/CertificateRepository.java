@@ -8,6 +8,7 @@ import java.util.List;
 public interface CertificateRepository extends JpaRepository<Certificate, Long> {
 
     // Alle certificaten van één cursus
+    @SuppressWarnings("unused")
     List<Certificate> findByCourse_Id(Long courseId);
 
     // Alle certificaten uitgegeven in cursussen van een specifieke trainer
@@ -17,5 +18,6 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     List<Certificate> findByStudent_Id(Long studentId);
 
     // Certificaat van één specifieke cursist binnen een specifieke cursus
+    @SuppressWarnings("unused")
     List<Certificate> findByCourse_IdAndStudent_Id(Long courseId, Long studentId);
 }
