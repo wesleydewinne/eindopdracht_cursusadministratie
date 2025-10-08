@@ -1,6 +1,10 @@
 package nl.novi.eindopdracht_cursusadministratie.service.user;
 
 import lombok.RequiredArgsConstructor;
+import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.RegistrationNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.TrainerNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.CursistNotFoundException;
 import nl.novi.eindopdracht_cursusadministratie.helper.CertificateNumberHelper;
 import nl.novi.eindopdracht_cursusadministratie.helper.DateHelper;
 import nl.novi.eindopdracht_cursusadministratie.helper.MailHelper;
@@ -20,11 +24,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Serviceklasse voor alle logica die hoort bij trainers.
- * Trainers kunnen hun gegevens beheren, cursussen bekijken,
- * aanwezigheid van cursisten registreren en certificaten genereren.
- */
+import static nl.novi.eindopdracht_cursusadministratie.helper.EntityFinderHelper.findEntityById;
+
 @Service
 @RequiredArgsConstructor
 public class TrainerService {
@@ -47,8 +48,7 @@ public class TrainerService {
      * @return de trainer als gevonden, anders een exceptie
      */
     public Trainer getTrainerById(Long id) {
-        return trainerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Trainer not found with id: " + id));
+        return findEntityById(id, trainerRepository, new TrainerNotFoundException(id));
     }
 
     /**
@@ -59,14 +59,13 @@ public class TrainerService {
      * @return de bijgewerkte trainer
      */
     public Trainer updateTrainer(Long id, Trainer updatedTrainer) {
-        return trainerRepository.findById(id)
-                .map(t -> {
-                    t.setName(updatedTrainer.getName());
-                    t.setEmail(updatedTrainer.getEmail());
-                    t.setExpertise(updatedTrainer.getExpertise());
-                    return trainerRepository.save(t);
-                })
-                .orElseThrow(() -> new RuntimeException("Trainer not found with id: " + id));
+        Trainer existing = findEntityById(id, trainerRepository, new TrainerNotFoundException(id));
+
+        existing.setName(updatedTrainer.getName());
+        existing.setEmail(updatedTrainer.getEmail());
+        existing.setExpertise(updatedTrainer.getExpertise());
+
+        return trainerRepository.save(existing);
     }
 
     // ================================================================
@@ -95,9 +94,7 @@ public class TrainerService {
      * @return de bijgewerkte inschrijving
      */
     public Registration markAttendance(Long registrationId, boolean aanwezig) {
-        Registration registration = registrationRepository.findById(registrationId)
-                .orElseThrow(() -> new RuntimeException("Registration not found with id: " + registrationId));
-
+        Registration registration = findEntityById(registrationId, registrationRepository, new RegistrationNotFoundException(registrationId));
         registration.setPresent(aanwezig);
         return registrationRepository.save(registration);
     }
@@ -115,58 +112,38 @@ public class TrainerService {
      * @return het opgeslagen certificaat
      */
     public Certificate generateCertificate(Long courseId, Long studentId, String issuedBy) {
-        // Controleer of cursus bestaat
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new RuntimeException("Course not found with id: " + courseId));
+        //  Ophalen van de vereiste entiteiten
+        Course course = findEntityById(courseId, courseRepository, new CourseNotFoundException(courseId));
+        User student = findEntityById(studentId, userRepository, new CursistNotFoundException(studentId));
 
         // Geen certificaat voor ontruimingsoefeningen
         if (course.getType() == TrainingType.ONTRUIMINGSOEFENING) {
-            throw new IllegalArgumentException("No certificate is issued for evacuation drills.");
+            throw new IllegalStateException("No certificate is issued for evacuation drills.");
         }
 
-        // Controleer of cursist bestaat
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found with id: " + studentId));
-
-        // Maak nieuw certificaat aan
+        //  Nieuw certificaat opbouwen
         LocalDate today = LocalDate.now();
         Certificate cert = new Certificate();
         cert.setCertificateNumber(CertificateNumberHelper.generateCertificateNumber());
         cert.setIssueDate(today);
         cert.setExpiryDate(DateHelper.calculateExpiryDate(today, course.getType()));
-        cert.setIssuedBy(issuedBy != null ? issuedBy : "Safety First BV");
+        cert.setIssuedBy(issuedBy != null ? issuedBy : "BHV Training");
         cert.setStudent(student);
         cert.setCourse(course);
 
-        // Opslaan in de database
         Certificate savedCert = certificateRepository.save(cert);
 
         // =============================================
-        // Automatische e-mailmelding naar de cursist
+        //  Automatische e-mailmelding via MailHelper
         // =============================================
-        String subject = "Je certificaat voor " + course.getName() + " is beschikbaar";
-        String message = String.format("""
-        Beste %s,
-
-        Gefeliciteerd! Je hebt de training "%s" succesvol afgerond.
-        Je certificaat met nummer %s is nu beschikbaar in het systeem.
-
-        Je kunt het downloaden door in te loggen op je account.
-
-        Geldig tot: %s
-        Uitgegeven door: %s
-
-        Met vriendelijke groet,
-        BHV Training
-        """,
+        mailHelper.sendCertificateNotification(
+                student.getEmail(),
                 student.getName(),
                 course.getName(),
                 cert.getCertificateNumber(),
-                cert.getExpiryDate(),
+                cert.getExpiryDate().toString(),
                 cert.getIssuedBy()
         );
-
-        mailHelper.sendMail(student.getEmail(), subject, message);
 
         return savedCert;
     }
