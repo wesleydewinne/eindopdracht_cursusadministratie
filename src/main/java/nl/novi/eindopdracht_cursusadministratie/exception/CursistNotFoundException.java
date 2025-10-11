@@ -9,7 +9,6 @@ public class CursistNotFoundException extends RuntimeException {
         super("Cursist not found with id: " + id);
     }
 
-    public CursistNotFoundException(String message) {
-        super(message);
+    public CursistNotFoundException(String message) {super(message);
     }
 }

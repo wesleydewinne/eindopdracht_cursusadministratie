@@ -34,4 +34,8 @@ public class Certificate {
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    @Lob
+    @Column(name = "pdf_data", columnDefinition = "BYTEA")
+    private byte[] pdfData;
 }
