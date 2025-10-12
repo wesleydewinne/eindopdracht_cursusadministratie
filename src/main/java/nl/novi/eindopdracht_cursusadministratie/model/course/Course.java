@@ -33,15 +33,20 @@ public class Course {
     @Positive(message = "Het maximum aantal deelnemers moet positief zijn")
     private Integer maxParticipants;
 
+    /**
+     * Geeft aan of een administrator mag toestaan dat het maximum aantal deelnemers wordt overschreden.
+     * Wordt gebruikt in de inschrijvingslogica.
+     */
+    @Column(name = "admin_override_allowed", nullable = false)
+    private boolean adminOverrideAllowed = false;
+
     @Enumerated(EnumType.STRING)
     private TrainingType type;
 
-    // Relatie: één trainer geeft meerdere cursussen
     @ManyToOne
     @JoinColumn(name = "trainer_id")
     private User trainer;
 
-    // Relatie: elke cursus heeft één locatie
     @ManyToOne
     @JoinColumn(name = "location_id")
     private Location location;
