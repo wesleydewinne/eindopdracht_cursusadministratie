@@ -6,8 +6,9 @@ import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.model.location.Location;
+import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationPhase;
+import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 
 import java.time.LocalDate;
 
@@ -44,4 +45,9 @@ public class Course {
     @ManyToOne
     @JoinColumn(name = "location_id")
     private Location location;
+
+    @Enumerated(EnumType.STRING)
+    private EvacuationPhase phase;
+
+    private boolean reportRequired;
 }

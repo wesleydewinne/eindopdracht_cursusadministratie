@@ -1,9 +1,8 @@
 package nl.novi.eindopdracht_cursusadministratie.service.course;
 
-import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
-import nl.novi.eindopdracht_cursusadministratie.exception.LocationNotFoundException;
-import nl.novi.eindopdracht_cursusadministratie.exception.TrainerNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.exception.*;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
+import nl.novi.eindopdracht_cursusadministratie.model.course.TrainingType;
 import nl.novi.eindopdracht_cursusadministratie.model.location.Location;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
@@ -56,6 +55,9 @@ public class CourseService {
     public Course createCourse(Course course) {
         setTrainerIfPresent(course);
         setLocationIfPresent(course);
+
+        applyEvacuationLogic(course);
+
         return courseRepository.save(course);
     }
 
@@ -68,60 +70,70 @@ public class CourseService {
         existingCourse.setStartDate(updatedCourse.getStartDate());
         existingCourse.setEndDate(updatedCourse.getEndDate());
         existingCourse.setMaxParticipants(updatedCourse.getMaxParticipants());
+        existingCourse.setPhase(updatedCourse.getPhase());
+        existingCourse.setReportRequired(updatedCourse.isReportRequired());
 
         setTrainerIfPresent(updatedCourse, existingCourse);
         setLocationIfPresent(updatedCourse, existingCourse);
 
+        applyEvacuationLogic(existingCourse);
+
         return courseRepository.save(existingCourse);
+    }
+
+    // ============================================================
+    // LOGICA: ONTRUIMINGSOEFENING
+    // ============================================================
+
+    /**
+     * Stelt automatisch in of een verslag vereist is bij ontruimingsoefeningen.
+     * TABLETOP → geen verslag, andere fasen → wel verslag.
+     */
+    private void applyEvacuationLogic(Course course) {
+        if (course.getType() == TrainingType.ONTRUIMINGSOEFENING) {
+            if (course.getPhase() != null) {
+                course.setReportRequired(course.getPhase() != nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationPhase.TABLETOP);
+            } else {
+                course.setReportRequired(false);
+            }
+        } else {
+            course.setPhase(null);
+            course.setReportRequired(false);
+        }
     }
 
     // ============================================================
     // HELPER METHODES
     // ============================================================
 
-    /** Koppelt een trainer als die is opgegeven bij het aanmaken van een cursus */
     private void setTrainerIfPresent(Course course) {
         if (course.getTrainer() != null && course.getTrainer().getId() != null) {
-            Trainer trainer = findEntityById(
-                    course.getTrainer().getId(),
-                    trainerRepository,
-                    new TrainerNotFoundException(course.getTrainer().getId())
-            );
+            Trainer trainer = findEntityById(course.getTrainer().getId(), trainerRepository,
+                    new TrainerNotFoundException(course.getTrainer().getId()));
             course.setTrainer(trainer);
         }
     }
 
-    /** Koppelt een locatie als die is opgegeven bij het aanmaken van een cursus */
     private void setLocationIfPresent(Course course) {
         if (course.getLocation() != null && course.getLocation().getId() != null) {
-            Location location = findEntityById(
-                    course.getLocation().getId(),
-                    locationRepository,
-                    new LocationNotFoundException(course.getLocation().getId())
-            );
+            Location location = findEntityById(course.getLocation().getId(), locationRepository,
+                    new LocationNotFoundException(course.getLocation().getId()));
             course.setLocation(location);
         }
     }
 
-    /** Zelfde, maar bij het bijwerken van een bestaande cursus */
     private void setTrainerIfPresent(Course source, Course target) {
         if (source.getTrainer() != null && source.getTrainer().getId() != null) {
-            Trainer trainer = findEntityById(
-                    source.getTrainer().getId(),
-                    trainerRepository,
-                    new TrainerNotFoundException(source.getTrainer().getId())
-            );
+            Trainer trainer = findEntityById(source.getTrainer().getId(), trainerRepository,
+                    new TrainerNotFoundException(source.getTrainer().getId()));
             target.setTrainer(trainer);
         }
     }
 
     private void setLocationIfPresent(Course source, Course target) {
         if (source.getLocation() != null && source.getLocation().getId() != null) {
-            Location location = findEntityById(
-                    source.getLocation().getId(),
-                    locationRepository,
-                    new LocationNotFoundException(source.getLocation().getId())
-            );
+            Location location = findEntityById(source.getLocation().getId(), locationRepository,
+                    new LocationNotFoundException(source.getLocation().getId()));
             target.setLocation(location);
         }
     }
