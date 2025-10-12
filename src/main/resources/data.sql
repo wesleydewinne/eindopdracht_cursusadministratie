@@ -184,74 +184,75 @@ INSERT INTO locations (
        true, 'Oefenterrein Buiten', true, true, true);
 
 
--- ============================================
--- COURSES
--- ============================================
+-- ============================================================
+-- Courses
+-- ============================================================
 
 INSERT INTO courses (
     id, name, description, start_date, end_date,
     max_participants, admin_override_allowed, type,
-    trainer_id, location_id
+    trainer_id, location_id, report_required
 ) VALUES
--- BHV Basis Amsterdam – 11 deelnemers toegestaan via admin override
+-- BHV Basis Amsterdam – admin override toegestaan
 (1, 'BHV Basis Amsterdam',
  'Basistraining bedrijfshulpverlening met praktijkonderdelen.',
  '2025-10-20', '2025-10-21',
- 10, true, 'BHV', 2, 1),
+ 10, true, 'BHV', 2, 1, false),
 
 -- EHBO Herhaling Rotterdam
 (2, 'EHBO Herhaling Rotterdam',
  'Opfristraining eerste hulp inclusief AED-gebruik.',
  '2025-10-23', '2025-10-23',
- 8, false, 'EHBO', 3, 2),
+ 8, false, 'EHBO', 3, 2, false),
 
 -- Ontruimingsoefening Utrecht
 (3, 'Ontruimingsoefening Utrecht',
  'Praktische ontruimingsoefening voor kantooromgeving.',
  '2025-10-25', '2025-10-25',
- 0, false, 'ONTRUIMINGSOEFENING', 4, 3),
+ 0, false, 'ONTRUIMINGSOEFENING', 4, 3, false),
 
 -- BHV Basis Eindhoven
 (4, 'BHV Basis Eindhoven',
  'BHV-training gericht op productiebedrijven en magazijnen.',
  '2025-10-28', '2025-10-29',
- 12, false, 'BHV', 5, 4),
+ 12, false, 'BHV', 5, 4, false),
 
 -- EHBO Volledige Training Groningen
 (5, 'EHBO Volledige Training Groningen',
  'Volledige EHBO-cursus inclusief reanimatie en verbandleer.',
  '2025-11-01', '2025-11-02',
- 10, false, 'EHBO', 6, 5),
+ 10, false, 'EHBO', 6, 5, false),
 
 -- Ontruimingsoefening Zwolle
 (6, 'Ontruimingsoefening Zwolle',
  'Simulatie van noodscenario’s voor BHV-teams.',
  '2025-11-05', '2025-11-05',
- 0, false, 'ONTRUIMINGSOEFENING', 7, 6),
+ 0, false, 'ONTRUIMINGSOEFENING', 7, 6, false),
 
 -- BHV Herhaling Tilburg
 (7, 'BHV Herhaling Tilburg',
  'Herhalingstraining met nadruk op brandbestrijding en EHBO.',
  '2025-11-08', '2025-11-08',
- 9, false, 'BHV', 8, 7),
+ 9, false, 'BHV', 8, 7, false),
 
 -- EHBO Basis Breda
 (8, 'EHBO Basis Breda',
  'Basiscursus EHBO met theorie en praktijkexamen.',
  '2025-11-12', '2025-11-13',
- 10, false, 'EHBO', 9, 8),
+ 10, false, 'EHBO', 9, 8, false),
 
 -- Ontruimingsoefening Den Haag
 (9, 'Ontruimingsoefening Den Haag',
  'Oefening gericht op communicatie tijdens noodsituaties.',
  '2025-11-15', '2025-11-15',
- 0, false, 'ONTRUIMINGSOEFENING', 10, 9),
+ 0, false, 'ONTRUIMINGSOEFENING', 10, 9, false),
 
 -- BHV en Ontruiming Nijmegen
 (10, 'BHV en Ontruiming Nijmegen',
  'Combinatietraining BHV en ontruiming met certificering.',
  '2025-11-18', '2025-11-19',
- 12, false, 'BHV', 11, 10);
+ 12, false, 'BHV', 11, 10, false);
+
 
 
 -- ============================================
