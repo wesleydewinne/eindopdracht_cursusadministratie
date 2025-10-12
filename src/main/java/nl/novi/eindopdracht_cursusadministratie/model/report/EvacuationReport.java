@@ -44,4 +44,8 @@ public class EvacuationReport {
     private ReportStatus status = ReportStatus.PENDING;
 
     private boolean visibleForStudents = false;
+
+    @Lob
+    @Column(name = "pdf_data", columnDefinition = "BYTEA")
+    private byte[] pdfData;
 }
