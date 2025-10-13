@@ -3,10 +3,13 @@ package nl.novi.eindopdracht_cursusadministratie.model.user;
 import jakarta.persistence.*;
 import lombok.*;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
-
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Subklasse van User die een trainer representeert.
+ * Bevat extra velden zoals expertise en de cursussen die de trainer geeft.
+ */
 @Entity
 @Getter
 @Setter
@@ -20,4 +23,3 @@ public class Trainer extends User {
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL)
     private List<Course> courses = new ArrayList<>();
 }
-
