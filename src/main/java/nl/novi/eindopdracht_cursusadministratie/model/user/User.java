@@ -1,17 +1,21 @@
 package nl.novi.eindopdracht_cursusadministratie.model.user;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+/**
+ * Superklasse voor alle gebruikers in het systeem.
+ * Wordt gebruikt voor authenticatie (JWT) en autorisatie (rollen).
+ * Trainers en cursisten erven hiervan.
+ */
 @Entity
+@Table(name = "users")
+@Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@Table(name = "users")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "user_type")
 public class User {
 
     @Id
@@ -27,7 +31,18 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    /**
+     * Rol van de gebruiker (ADMIN, TRAINER, CURSIST).
+     * Wordt gebruikt door Spring Security om rechten toe te kennen.
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    public User(String name, String email, String password, Role role) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+    }
 }
