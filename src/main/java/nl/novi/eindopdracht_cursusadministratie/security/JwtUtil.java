@@ -1,6 +1,7 @@
 package nl.novi.eindopdracht_cursusadministratie.security;
 
 import io.jsonwebtoken.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +13,11 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    private final String SECRET_KEY = "superSecretKeyThatIsAtLeast32CharactersLong";
+    @Value("${jwt.secret}")
+    private String secret;
+
+    @Value("${jwt.expiration:86400000}")
+    private long expirationTime;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -28,15 +33,21 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+        return Jwts.parser()
+                .setSigningKey(secret)
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
+    // 🔹 Token genereren mét rol
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        String role = userDetails.getAuthorities().iterator().next().getAuthority();
+        claims.put("role", role);
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -45,8 +56,8 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
     }
 
