@@ -1,6 +1,6 @@
 # 🧑‍🏫 Cursusadministratie – Backend (Spring Boot)
 
-Dit project is ontwikkeld als onderdeel van de **Eindopdracht Backend – Leerlijn Software Development**.  
+Dit project is ontwikkeld als onderdeel van de **Integrale Eindopdracht van de leerlijn Backend (versie 3.5)** aan de  **NOVI Hogeschool**.  
 De applicatie ondersteunt het volledige proces rondom **BHV-, EHBO- en ontruimingstrainingen**, van inschrijving tot certificering.
 
 ---
@@ -19,10 +19,14 @@ De applicatie ondersteunt het volledige proces rondom **BHV-, EHBO- en ontruimin
 
 ---
 
-## 📝 Projectomschrijving
+## Projectomschrijving
 
-De **Cursusadministratie API** automatiseert het administratieve proces van trainingen zoals **BHV**, **EHBO** en **ontruimingsoefeningen**.  
+De **Cursusadministratie API** automatiseert het administratieve proces van trainingen zoals **BHV**, **EHBO** en **ontruimingsoefeningen**.
 De backend beheert cursisten, trainers, locaties, certificaten en ontruimingsverslagen via een beveiligde REST API.
+
+Veel organisaties houden BHV- en EHBO-administratie nog handmatig bij, wat foutgevoelig en tijdrovend is.
+Deze API automatiseert het volledige proces van inschrijving tot certificering, waardoor tijd wordt bespaard en overzicht behouden blijft.
+Cursisten, trainers en beheerders werken voortaan in één centrale omgeving, wat de efficiëntie, veiligheid en betrouwbaarheid van het opleidingsproces aanzienlijk verhoogt.
 
 - Trainers kunnen deelnemers beheren, aanwezigheden registreren en certificaten genereren.
 - Cursisten kunnen hun eigen gegevens en certificaten inzien en certificaat-PDF’s downloaden.
@@ -30,23 +34,24 @@ De backend beheert cursisten, trainers, locaties, certificaten en ontruimingsver
 
 ---
 
-## ⚙️ Technische Stack
+## Technische Stack
 
-| Component           | Technologie                                   |
-|---------------------|-----------------------------------------------|
-| **Programmeertaal** | Java 21                                      |
-| **Framework**       | Spring Boot 3                                |
-| **Database**        | PostgreSQL                                   |
-| **ORM**             | Spring Data JPA                              |
-| **Beveiliging**     | Spring Security + JWT (rolgebaseerde auth)   |
-| **Testing**         | JUnit 5, Mockito, Spring MockMvc             |
-| **PDF-generatie**   | OpenPDF (LibrePDF)                           |
-| **Build tool**      | Maven                                        |
-| **Versiebeheer**    | Git / GitHub                                 |
+| Component           | Technologie                                |
+|---------------------|--------------------------------------------|
+| **Programmeertaal** | Java 21                                    |
+| **Framework**       | Spring Boot 3                              |
+| **Database**        | PostgreSQL                                 |
+| **ORM**             | Spring Data JPA                            |
+| **Validatie**       | Jakarta Validation (Bean Validation)       |
+| **Beveiliging**     | Spring Security + JWT (rolgebaseerde auth) |
+| **Testing**         | JUnit 5, Mockito, Spring MockMvc           |
+| **PDF-generatie**   | OpenPDF (LibrePDF)                         |
+| **Build tool**      | Maven                                      |
+| **Versiebeheer**    | Git / GitHub                               |
 
 ---
 
-## 🚀 Functionaliteiten
+## Functionaliteiten
 
 ✅ **Cursusbeheer**
 - Cursussen aanmaken, bijwerken en verwijderen (BHV, EHBO, ontruimingsoefeningen)
@@ -82,7 +87,7 @@ De backend beheert cursisten, trainers, locaties, certificaten en ontruimingsver
 
 ---
 
-## 👥 Gebruikersrollen
+## Gebruikersrollen
 
 | Rol                | Beschrijving                                                                 |
 |--------------------|-------------------------------------------------------------------------------|
@@ -92,7 +97,7 @@ De backend beheert cursisten, trainers, locaties, certificaten en ontruimingsver
 
 ---
 
-## 🧱 Projectstructuur
+## Projectstructuur
 
 ```plaintext
 src/
@@ -172,7 +177,7 @@ Er zijn zowel **unit-tests** als **integratietests** geïmplementeerd.
     - `CourseServiceTest`
     - `CertificateServiceTest`
     - `TrainerServiceTest`
-- > 100% line coverage op de service-laag
+- 100% line coverage op de service-laag
 - Duidelijke *Arrange → Act → Assert* structuur
 
 ### Integratietests
@@ -195,21 +200,47 @@ Er zijn zowel **unit-tests** als **integratietests** geïmplementeerd.
    git clone https://github.com/wesleydewinne/eindopdracht_cursusadministratie.git
    ```
 
+
 2. **Open het project in IntelliJ IDEA**  
    Zorg dat Maven dependencies automatisch worden gedownload.
+
 
 3. **Database configuratie (PostgreSQL):**
     - Maak een database aan met de naam `eindopdracht_cursusadministratie`
     - Pas eventueel `spring.datasource.username` en `spring.datasource.password` aan in `application.properties`.
 
+
 4. **Start de applicatie:**
    ```bash
    mvn spring-boot:run
    ```
+5. **Testgebruikers (voorbeelddata in data.sql):**
 
-5. **Test de API via Postman of browser:**
+De database bevat meerdere testgebruikers voor elke rol.  
+Alle trainers en cursisten hebben een **gelijk wachtwoord** om het testen te vereenvoudigen.
+
+   | Rol         | Gebruikersnaam                     | Wachtwoord   | Toegang                                             |
+   |-------------|------------------------------------|--------------|-----------------------------------------------------|
+   | **ADMIN**   | admin@bhvtraining.nl               | Admin2025!     | Volledige toegang tot alle endpoints                |
+   | **TRAINER** | trainer**(number)**@bhvtraining.nl | Trainer2025!   | Eigen cursussen, deelnemers en certificaten         |
+   | **CURSIST** | cursist**(number)**@bedrijf.nl     | Cursist2025!   | Eigen gegevens, inschrijvingen en certificaten      |
+
+📘 **Voorbeeld:**
+- Trainer: `trainer1@bhvtraining.nl`, `trainer2@bhvtraining.nl`, `trainer3@bhvtraining.nl`, …
+- Cursist: `cursist1@bhvtraining.nl`, `cursist2@bhvtraining.nl`, `cursist3@bhvtraining.nl`, …
+
+Alle wachtwoorden zijn identiek per rol (dus één wachtwoord voor alle trainers en één voor alle cursisten), zoals vastgelegd in de `data.sql`.
+
+6. **Test de API via Postman of browser:**
     - http://localhost:8080/api/courses
     - http://localhost:8080/api/certificates
+    - http://localhost:8080/api/auth/login
+
+7. **Postman-collectie:**
+   
+Een kant-en-klare Postman-collectie (JSON) is toegevoegd aan de oplevermap: 
+postman/Cursusadministratie_API.postman_collection.json
+Deze bevat voorbeeldaanroepen voor login, cursussen, certificaten, ontruimingsverslagen en inschrijvingen per rol.
 
 ---
 
@@ -222,13 +253,16 @@ Voorbeeld endpoints:
 |-----------|----------|---------------|-----|
 | `/api/courses` | GET | Alle cursussen ophalen | Admin / Trainer |
 | `/api/courses/{id}` | GET | Cursusdetails ophalen | Admin / Trainer |
+| `/api/courses` | POST | Nieuwe cursus aanmaken | Admin |
 | `/api/certificates/{id}` | GET | Certificaat downloaden | Admin / Cursist |
+| `/api/certificates/my` | GET | Eigen certificaten bekijken | Cursist |
 | `/api/trainers/registrations/{id}/attendance` | PUT | Aanwezigheid registreren | Trainer |
 
 ---
 
-## 🔮 Toekomstige uitbreidingen
+## Toekomstige uitbreidingen
 
+- Centralisatie van beveiligingsregels in `SecurityConfig` voor beter beheer en onderhoud
 - Betalingssysteem (Mollie/iDEAL)
 - Automatische facturatie
 - Meertalige ondersteuning (i18n)
@@ -239,7 +273,7 @@ Voorbeeld endpoints:
 
 ---
 
-## 👤 Auteur
+## Auteur
 
 **Wesley De Winne**  
 Backend Developer – 2025  

@@ -60,4 +60,8 @@ public class LocationService {
         }
         repository.deleteById(id);
     }
+
+    public Location getLocationById(Long id) {
+        return findEntityById(id, repository, new LocationNotFoundException(id));
+    }
 }
