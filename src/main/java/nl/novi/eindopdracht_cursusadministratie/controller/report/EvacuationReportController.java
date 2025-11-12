@@ -1,151 +1,253 @@
 package nl.novi.eindopdracht_cursusadministratie.controller.report;
 
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import nl.novi.eindopdracht_cursusadministratie.dto.report.CreateEvacuationReportRequestDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.report.EvacuationReportResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.report.EvacuationReportSummaryDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.response.DeleteResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.exception.UserNotFoundException;
+import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
+import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationPhase;
 import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
+import nl.novi.eindopdracht_cursusadministratie.model.report.ReportStatus;
+import nl.novi.eindopdracht_cursusadministratie.model.user.User;
+import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
+import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import nl.novi.eindopdracht_cursusadministratie.service.report.EvacuationReportService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/reports")
+@RequiredArgsConstructor
+@CrossOrigin
 public class EvacuationReportController {
 
     private final EvacuationReportService reportService;
+    private final UserRepository userRepository;
+    private final CourseRepository courseRepository;
 
-    public EvacuationReportController(EvacuationReportService reportService) {
-        this.reportService = reportService;
-    }
 
     // ============================================================
-    // ALGEMENE ACTIES
+    // ADMIN OVERZICHT
     // ============================================================
 
-    /** Alle verslagen ophalen (alleen admin) */
-    @GetMapping
-    public ResponseEntity<List<EvacuationReport>> getAllReports() {
-        return ResponseEntity.ok(reportService.getAllReports());
+    @GetMapping("/summary")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EvacuationReportSummaryDto>> getAllReportSummaries() {
+        List<EvacuationReportSummaryDto> summaries = reportService.getAllReports().stream()
+                .map(r -> new EvacuationReportSummaryDto(
+                        r.getId(),
+                        r.getCourse() != null ? r.getCourse().getStartDate() : null,
+                        r.getPhase() != null ? r.getPhase().name() : null,
+                        (r.getCourse() != null && r.getCourse().getLocation() != null)
+                                ? r.getCourse().getLocation().getCompanyName()
+                                : null
+                ))
+                .toList();
+        return ResponseEntity.ok(summaries);
     }
 
-    /** Alle verslagen van een specifieke cursus ophalen */
-    @GetMapping("/course/{courseId}")
-    public ResponseEntity<List<EvacuationReport>> getReportsByCourse(@PathVariable Long courseId) {
-        return ResponseEntity.ok(reportService.getReportsByCourse(courseId));
-    }
-
-    /** Alleen goedgekeurde verslagen die zichtbaar zijn voor cursisten */
-    @GetMapping("/course/{courseId}/visible")
-    public ResponseEntity<List<EvacuationReport>> getVisibleReports(@PathVariable Long courseId) {
-        return ResponseEntity.ok(reportService.getVisibleReports(courseId));
-    }
-
-    /** Specifiek verslag ophalen op ID */
     @GetMapping("/{id}")
-    public ResponseEntity<EvacuationReport> getReportById(@PathVariable Long id) {
-        return ResponseEntity.ok(reportService.getReportById(id));
+    @PreAuthorize("hasAnyRole('ADMIN','TRAINER')")
+    public ResponseEntity<EvacuationReportResponseDto> getReportById(@PathVariable Long id) {
+        EvacuationReport report = reportService.getReportById(id);
+        return ResponseEntity.ok(toDto(report));
     }
+
+    @GetMapping("/trainer/{trainerId}")
+    @PreAuthorize("hasRole('TRAINER')")
+    public ResponseEntity<List<EvacuationReportResponseDto>> getReportsByTrainer(@PathVariable Long trainerId) {
+        List<EvacuationReportResponseDto> dtos = reportService.getReportsByTrainer(trainerId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+        return ResponseEntity.ok(dtos);
+    }
+
 
     // ============================================================
     // TRAINER ACTIES
     // ============================================================
 
-    /** Nieuw verslag aanmaken door trainer */
     @PostMapping
-    public ResponseEntity<EvacuationReport> createReport(
+    @PreAuthorize("hasRole('TRAINER')")
+    public ResponseEntity<EvacuationReportResponseDto> createReport(
             @RequestParam Long courseId,
-            @RequestParam Long trainerId,
-            @RequestBody EvacuationReport reportData
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody @Valid CreateEvacuationReportRequestDto dto
     ) {
-        EvacuationReport createdReport = reportService.createReport(courseId, trainerId, reportData);
-        return ResponseEntity.ok(createdReport);
+        User trainer = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("Trainer niet gevonden."));
+
+        EvacuationReport reportData = new EvacuationReport();
+        reportData.setPhase(EvacuationPhase.valueOf(dto.phase()));
+        reportData.setEvacuationTimeMinutes(dto.evacuationTimeMinutes());
+        reportData.setBuildingSize(dto.buildingSize());
+        reportData.setObservations(dto.observations());
+        reportData.setImprovements(dto.improvements());
+
+        EvacuationReport created = reportService.createReport(courseId, trainer.getId(), reportData);
+        return ResponseEntity.ok(toDto(created));
     }
 
-    /** Verslag bijwerken zolang status = PENDING */
     @PutMapping("/{id}")
-    public ResponseEntity<EvacuationReport> updateReport(
+    @PreAuthorize("hasRole('TRAINER')")
+    public ResponseEntity<EvacuationReportResponseDto> updateReport(
             @PathVariable Long id,
-            @RequestBody EvacuationReport updatedData
+            @RequestBody EvacuationReport updatedData,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        EvacuationReport updatedReport = reportService.updateReport(id, updatedData);
-        return ResponseEntity.ok(updatedReport);
+        User trainer = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("Trainer niet gevonden."));
+
+        EvacuationReport updated = reportService.updateReport(id, updatedData, trainer);
+        return ResponseEntity.ok(toDto(updated));
     }
+
 
     // ============================================================
     // ADMIN ACTIES
     // ============================================================
 
-    /** Verslag goedkeuren door admin */
     @PutMapping("/{id}/approve")
-    public ResponseEntity<EvacuationReport> approveReport(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EvacuationReportResponseDto> approveReport(
             @PathVariable Long id,
             @RequestParam Long adminId
     ) {
         EvacuationReport approved = reportService.approveReport(id, adminId);
-        return ResponseEntity.ok(approved);
+        return ResponseEntity.ok(toDto(approved));
     }
 
-    /** Verslag afkeuren door admin */
     @PutMapping("/{id}/reject")
-    public ResponseEntity<EvacuationReport> rejectReport(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EvacuationReportResponseDto> rejectReport(
             @PathVariable Long id,
             @RequestParam Long adminId,
             @RequestParam String remarks
     ) {
         EvacuationReport rejected = reportService.rejectReport(id, adminId, remarks);
-        return ResponseEntity.ok(rejected);
+        return ResponseEntity.ok(toDto(rejected));
     }
 
-    /** Verslag verwijderen (alleen admin) */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReport(@PathVariable Long id) {
-        reportService.deleteReport(id);
-        return ResponseEntity.noContent().build();
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<DeleteResponseDto> deleteReport(@PathVariable Long id) {
+        boolean deleted = reportService.deleteReportById(id);
+
+        if (!deleted) {
+            return ResponseEntity.status(404)
+                    .body(new DeleteResponseDto("❌ Ontruimingsverslag met ID " + id + " is niet gevonden of kon niet worden verwijderd."));
+        }
+
+        return ResponseEntity.ok(new DeleteResponseDto("✅ Ontruimingsverslag met ID " + id + " is succesvol verwijderd."));
     }
+
 
     // ============================================================
     // PDF DOWNLOAD
     // ============================================================
 
-    /** Download PDF van een ontruimingsverslag (voor admin of trainer) */
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<byte[]> downloadReportPdf(@PathVariable Long id) {
-        byte[] pdfData = reportService.getReportPdf(id);
-
-        if (pdfData == null || pdfData.length == 0) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=evacuation_report_" + id + ".pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdfData);
+    @PreAuthorize("hasAnyRole('ADMIN','TRAINER','CURSIST')")
+    public ResponseEntity<byte[]> downloadReportPdf(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return getReportPdfResponse(id, userDetails, true);
     }
 
-    /** Bekijk PDF van een ontruimingsverslag inline in de browser (alleen goedgekeurde verslagen) */
     @GetMapping("/{id}/pdf/inline")
-    public ResponseEntity<byte[]> viewReportPdfInline(@PathVariable Long id) {
-        // Verslag ophalen
+    @PreAuthorize("hasAnyRole('ADMIN','TRAINER','CURSIST')")
+    public ResponseEntity<byte[]> viewReportPdfInline(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return getReportPdfResponse(id, userDetails, false);
+    }
+
+
+    // ============================================================
+    // GEMEENSCHAPPELIJKE LOGICA VOOR PDF
+    // ============================================================
+
+    private ResponseEntity<byte[]> getReportPdfResponse(Long id, UserDetails userDetails, boolean asDownload) {
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("Gebruiker niet gevonden."));
         EvacuationReport report = reportService.getReportById(id);
 
-        // Alleen goedgekeurde verslagen mogen zichtbaar zijn
-        if (report.getStatus() != nl.novi.eindopdracht_cursusadministratie.model.report.ReportStatus.APPROVED) {
-            return ResponseEntity.status(403) // Forbidden
-                    .header(HttpHeaders.WARNING, "Verslag is nog niet goedgekeurd door de admin.")
+        boolean isTrainer = user.getRole().name().equalsIgnoreCase("TRAINER");
+        boolean isCursist = user.getRole().name().equalsIgnoreCase("CURSIST");
+
+        if (isTrainer && !report.getCreatedBy().getId().equals(user.getId())) {
+            return ResponseEntity.status(403)
+                    .header(HttpHeaders.WARNING, "Je kunt alleen je eigen verslagen downloaden.")
                     .build();
         }
+        if (isTrainer && report.getStatus() != ReportStatus.APPROVED) {
+            return ResponseEntity.status(403)
+                    .header(HttpHeaders.WARNING, "Verslag is nog niet goedgekeurd.")
+                    .build();
+        }
+        if (isCursist) {
+            if (report.getStatus() != ReportStatus.APPROVED || !report.isVisibleForStudents()) {
+                return ResponseEntity.status(403)
+                        .header(HttpHeaders.WARNING, "Verslag is niet zichtbaar of nog niet goedgekeurd.")
+                        .build();
+            }
+            Course course = report.getCourse();
+            if (course == null || course.getLocation() == null) {
+                return ResponseEntity.status(403)
+                        .header(HttpHeaders.WARNING, "Geen locatie-informatie gevonden voor dit verslag.")
+                        .build();
+            }
+            boolean volgtOpZelfdeLocatie = courseRepository.existsByLocation_IdAndRegistrations_Student_Id(
+                    course.getLocation().getId(),
+                    user.getId()
+            );
+            if (!volgtOpZelfdeLocatie) {
+                return ResponseEntity.status(403)
+                        .header(HttpHeaders.WARNING, "Je bent niet ingeschreven voor een training op deze locatie.")
+                        .build();
+            }
+        }
 
-        // PDF ophalen of genereren indien nodig
-        byte[] pdfData = reportService.getReportPdf(id);
-
-        if (pdfData == null || pdfData.length == 0) {
+        byte[] pdf = reportService.getReportPdf(id);
+        if (pdf == null || pdf.length == 0) {
             return ResponseEntity.notFound().build();
         }
 
+        String disposition = asDownload ? "attachment" : "inline";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=evacuation_report_" + id + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=evacuation_report_" + id + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
-                .body(pdfData);
+                .body(pdf);
+    }
+
+    // ============================================================
+    // DTO HELPER
+    // ============================================================
+
+    private EvacuationReportResponseDto toDto(EvacuationReport r) {
+        return new EvacuationReportResponseDto(
+                r.getId(),
+                r.getCourse() != null ? r.getCourse().getName() : null,
+                r.getPhase() != null ? r.getPhase().name() : null,
+                r.getEvacuationTimeMinutes(),
+                r.getBuildingSize(),
+                r.getObservations(),
+                r.getImprovements(),
+                r.getEvaluationAdvice(),
+                r.getStatus()
+        );
     }
 }

@@ -14,57 +14,58 @@ import java.util.List;
 
 import static nl.novi.eindopdracht_cursusadministratie.helper.EntityFinderHelper.findEntityById;
 
+/**
+ * Serviceklasse voor cursisten.
+ *
+ * Taken:
+ * - Ophalen van cursistgegevens
+ * - Ophalen van certificaten van de cursist
+ * - Ophalen van inschrijvingen (registraties) van de cursist
+ */
 @Service
 @RequiredArgsConstructor
 public class CursistService {
 
     private final CursistRepository cursistRepository;
-    private final RegistrationRepository registrationRepository;
     private final CertificateRepository certificateRepository;
+    private final RegistrationRepository registrationRepository;
 
     // ============================================================
-    //  CURSIST GEGEVENS
+    // CURSIST GEGEVENS
     // ============================================================
 
     /**
-     * Haalt de gegevens van een specifieke cursist op.
-     *
-     * @param id ID van de cursist
-     * @return De gevonden cursist
+     * Haalt één specifieke cursist op.
+     * Gooit een CursistNotFoundException als deze niet bestaat.
      */
-    public Cursist getCursistById(Long id) {
-        return findEntityById(id, cursistRepository, new CursistNotFoundException(id));
+    public Cursist getCursistById(Long cursistId) {
+        return findEntityById(cursistId, cursistRepository, new CursistNotFoundException(cursistId));
     }
 
     // ============================================================
-    //  CERTIFICATEN
+    // CERTIFICATEN
     // ============================================================
 
     /**
-     * Haalt alle certificaten van een specifieke cursist op.
-     *
-     * @param cursistId ID van de cursist
-     * @return Lijst van certificaten
+     * Haalt alle certificaten op die gekoppeld zijn aan de cursist.
      */
     public List<Certificate> getCertificatesByCursist(Long cursistId) {
-        // Controleer eerst of de cursist bestaat
+
         findEntityById(cursistId, cursistRepository, new CursistNotFoundException(cursistId));
         return certificateRepository.findByStudent_Id(cursistId);
     }
 
     // ============================================================
-    //  INSCHRIJVINGEN
+    // INSCHRIJVINGEN
     // ============================================================
 
     /**
-     * Haalt alle inschrijvingen van een specifieke cursist op.
-     *
-     * @param cursistId ID van de cursist
-     * @return Lijst van inschrijvingen
+     * Haalt alle inschrijvingen (registraties) van een specifieke cursist op.
      */
     public List<Registration> getRegistrationsByCursist(Long cursistId) {
-        // Controleer eerst of de cursist bestaat
+
         findEntityById(cursistId, cursistRepository, new CursistNotFoundException(cursistId));
+
         return registrationRepository.findByStudent_Id(cursistId);
     }
 }

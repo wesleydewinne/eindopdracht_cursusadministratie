@@ -31,10 +31,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    /**
-     * Rol van de gebruiker (ADMIN, TRAINER, CURSIST).
-     * Wordt gebruikt door Spring Security om rechten toe te kennen.
-     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;

@@ -1,35 +1,38 @@
 package nl.novi.eindopdracht_cursusadministratie.service.user;
 
-import nl.novi.eindopdracht_cursusadministratie.exception.*;
-import nl.novi.eindopdracht_cursusadministratie.helper.MailHelper;
+import nl.novi.eindopdracht_cursusadministratie.dto.course.CourseCompletionSummaryDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.course.CourseTrainerResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.registration.RegistrationStatusResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.course.TrainingType;
 import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
+import nl.novi.eindopdracht_cursusadministratie.model.registration.RegistrationStatus;
+import nl.novi.eindopdracht_cursusadministratie.model.user.Cursist;
+import nl.novi.eindopdracht_cursusadministratie.model.user.Role;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
-import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.certificate.CertificateRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.registration.RegistrationRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.TrainerRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
+import nl.novi.eindopdracht_cursusadministratie.helper.MailHelper;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class TrainerServiceTest {
 
     @Mock private TrainerRepository trainerRepository;
@@ -38,45 +41,55 @@ class TrainerServiceTest {
     @Mock private CertificateRepository certificateRepository;
     @Mock private UserRepository userRepository;
     @Mock private MailHelper mailHelper;
+    @Mock private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private TrainerService trainerService;
 
     private Trainer trainer;
+    private Cursist student;
     private Course course;
     private Registration registration;
-    private User student;
 
+    // ============================================================
+    // SETUP + SECURITY MOCK
+    // ============================================================
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
+
         trainer = new Trainer();
-        trainer.setId(10L);
-        trainer.setName("Jan Trainer");
-        trainer.setEmail("jan.trainer@bhvtraining.nl");
+        trainer.setId(1L);
+        trainer.setName("Trainer X");
+        trainer.setEmail("trainer@example.com");
+        trainer.setRole(Role.TRAINER);
+
+        student = new Cursist();
+        student.setId(2L);
+        student.setName("Jan Jansen");
+        student.setEmail("jan@example.com");
 
         course = new Course();
-        course.setId(1L);
-        course.setName("EHBO Basis");
-        course.setType(TrainingType.EHBO);
+        course.setId(3L);
+        course.setName("BHV Basiscursus");
         course.setTrainer(trainer);
+        course.setType(TrainingType.BHV);
+        course.setRegistrations(new ArrayList<>());
 
         registration = new Registration();
-        registration.setId(1L);
+        registration.setId(10L);
         registration.setCourse(course);
-        registration.setPresent(false);
+        registration.setStudent(student);
+        registration.setStatus(RegistrationStatus.PENDING);
+        registration.setPresent(true);
+        course.getRegistrations().add(registration);
 
-        student = new User();
-        student.setId(100L);
-        student.setName("Piet Student");
-        student.setEmail("piet@student.nl");
-
-        TestingAuthenticationToken token =
-                new TestingAuthenticationToken(trainer.getEmail(), "password");
-        token.setAuthenticated(true);
-        SecurityContextHolder.getContext().setAuthentication(token);
-
-        lenient().when(userRepository.findByEmail(trainer.getEmail()))
-                .thenReturn(Optional.of(trainer));
+        var auth = new UsernamePasswordAuthenticationToken(
+                trainer.getEmail(),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_TRAINER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     @AfterEach
@@ -84,106 +97,122 @@ class TrainerServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    // =============================================================
-    // TESTS
-    // =============================================================
-
+    // ============================================================
+    // GET TRAINER BY ID
+    // ============================================================
     @Test
-    void shouldReturnTrainer_whenFoundById() {
-        when(trainerRepository.findById(10L)).thenReturn(Optional.of(trainer));
+    @DisplayName("Trainer wordt correct opgehaald op basis van ID")
+    void getTrainerById() {
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
 
-        Trainer result = trainerService.getTrainerById(10L);
+        var result = trainerService.getTrainerById(1L);
 
-        assertNotNull(result);
-        assertEquals("Jan Trainer", result.getName());
-        verify(trainerRepository).findById(10L);
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("Trainer X");
+        verify(trainerRepository).findById(1L);
     }
 
+    // ============================================================
+    // GET COURSES BY TRAINER
+    // ============================================================
     @Test
-    void shouldUpdateTrainerDetailsSuccessfully() {
-        Trainer updated = new Trainer();
-        updated.setName("Nieuwe Naam");
-        updated.setEmail("nieuw@bhvtraining.nl");
-        updated.setExpertise("EHBO");
+    @DisplayName("Trainer kan overzicht van eigen cursussen ophalen")
+    void getCoursesByTrainer() {
+        when(courseRepository.findByTrainer_Id(1L)).thenReturn(List.of(course));
 
-        when(trainerRepository.findById(10L)).thenReturn(Optional.of(trainer));
-        when(trainerRepository.save(any(Trainer.class))).thenAnswer(i -> i.getArguments()[0]);
+        List<CourseTrainerResponseDto> result = trainerService.getCoursesByTrainer(1L);
 
-        Trainer result = trainerService.updateTrainer(10L, updated);
-
-        assertEquals("Nieuwe Naam", result.getName());
-        assertEquals("nieuw@bhvtraining.nl", result.getEmail());
-        verify(trainerRepository).save(any(Trainer.class));
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("BHV Basiscursus");
+        verify(courseRepository).findByTrainer_Id(1L);
     }
 
+    // ============================================================
+    // COMPLETE COURSE
+    // ============================================================
     @Test
-    void shouldThrowAccessDenied_whenTrainerNotOwnerOfCourse() {
-        Trainer otherTrainer = new Trainer();
-        otherTrainer.setId(99L);
+    @DisplayName("Cursus wordt correct afgerond en absenties gemarkeerd")
+    void completeCourse() {
+        registration.setStatus(RegistrationStatus.APPROVED);
 
-        Course otherCourse = new Course();
-        otherCourse.setId(2L);
-        otherCourse.setTrainer(otherTrainer);
-        registration.setCourse(otherCourse);
+        Registration absent = new Registration();
+        absent.setStudent(student);
+        absent.setPresent(false);
+        absent.setStatus(RegistrationStatus.PENDING);
+        course.getRegistrations().add(absent);
 
-        when(registrationRepository.findById(1L)).thenReturn(Optional.of(registration));
+        when(courseRepository.findById(3L)).thenReturn(Optional.of(course));
 
-        TestingAuthenticationToken token =
-                new TestingAuthenticationToken("someone@bhvtraining.nl", "password");
-        token.setAuthenticated(true);
-        SecurityContextHolder.getContext().setAuthentication(token);
+        CourseCompletionSummaryDto result = trainerService.completeCourse(3L);
 
-        lenient().when(userRepository.findByEmail("someone@bhvtraining.nl"))
-                .thenReturn(Optional.empty());
-
-        assertThrows(AccessDeniedException.class,
-                () -> trainerService.markAttendance(1L, true));
+        assertThat(result.approved()).contains("Jan Jansen");
+        assertThat(result.absent()).contains("Jan Jansen");
+        verify(registrationRepository).saveAll(anyList());
     }
 
+    // ============================================================
+    // MARK ATTENDANCE
+    // ============================================================
     @Test
-    void shouldMarkAttendanceSuccessfully_whenTrainerIsOwner() {
-        when(registrationRepository.findById(1L)).thenReturn(Optional.of(registration));
-        when(registrationRepository.save(any(Registration.class))).thenAnswer(i -> i.getArguments()[0]);
+    @DisplayName("Trainer kan aanwezigheid markeren voor cursist")
+    void markAttendanceForCourse() {
+        when(registrationRepository.findById(10L)).thenReturn(Optional.of(registration));
 
-        Registration result = trainerService.markAttendance(1L, true);
+        RegistrationStatusResponseDto result = trainerService.markAttendanceForCourse(3L, 10L, true);
 
-        assertTrue(result.isPresent());
+        assertThat(result.isPresent()).isTrue();
         verify(registrationRepository).save(any(Registration.class));
     }
 
+    // ============================================================
+    // UPDATE STATUS
+    // ============================================================
     @Test
-    void shouldGenerateCertificateAndSendEmail() {
-        when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
-        when(userRepository.findById(100L)).thenReturn(Optional.of(student));
-        when(certificateRepository.save(any(Certificate.class))).thenAnswer(i -> i.getArguments()[0]);
+    @DisplayName("Trainer kan status bijwerken van cursist")
+    void updateRegistrationStatusForCourse() {
+        when(registrationRepository.findById(10L)).thenReturn(Optional.of(registration));
+        when(certificateRepository.findByCourse_IdAndStudent_Id(3L, 2L))
+                .thenReturn(Optional.empty());
+        when(certificateRepository.save(any(Certificate.class)))
+                .thenAnswer(i -> i.getArgument(0));
 
-        Certificate result = trainerService.generateCertificate(1L, 100L, "BHV Training");
+        RegistrationStatusResponseDto result = trainerService.updateRegistrationStatusForCourse(
+                3L, 10L, RegistrationStatus.APPROVED
+        );
 
-        assertNotNull(result.getCertificateNumber());
-        assertEquals("EHBO Basis", result.getCourse().getName());
-        assertEquals("BHV Training", result.getIssuedBy());
+        assertThat(result.getStatus()).isEqualTo(RegistrationStatus.APPROVED);
+        verify(certificateRepository).save(any(Certificate.class));
+    }
+
+    // ============================================================
+    // GENERATE CERTIFICATE
+    // ============================================================
+    @Test
+    @DisplayName("Trainer kan handmatig certificaat genereren")
+    void generateCertificate() {
+        when(courseRepository.findById(3L)).thenReturn(Optional.of(course));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(student));
+        when(certificateRepository.save(any(Certificate.class))).thenAnswer(i -> i.getArgument(0));
+
+        Certificate result = trainerService.generateCertificate(3L, 2L, "Trainer X");
+
+        assertThat(result.getStudent().getName()).isEqualTo("Jan Jansen");
+        assertThat(result.getCourse().getName()).isEqualTo("BHV Basiscursus");
         verify(mailHelper).sendCertificateNotification(
-                anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
+                eq("jan@example.com"), eq("Jan Jansen"), eq("BHV Basiscursus"),
+                anyString(), anyString(), eq("Trainer X")
+        );
     }
 
+    // ============================================================
+    // EXCEPTION CASE
+    // ============================================================
     @Test
-    void shouldThrowException_whenCourseTypeIsEvacuation() {
-        course.setType(TrainingType.ONTRUIMINGSOEFENING);
-        when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
-        when(userRepository.findById(100L)).thenReturn(Optional.of(student));
+    @DisplayName("Bij onbekende cursus-ID wordt CourseNotFoundException gegooid")
+    void completeCourse_CourseNotFound() {
+        when(courseRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalStateException.class,
-                () -> trainerService.generateCertificate(1L, 100L, "BHV Training"));
-    }
-
-    @Test
-    void shouldGetCertificatesByTrainer_whenAuthorized() {
-        when(certificateRepository.findByCourse_Trainer_Id(10L))
-                .thenReturn(List.of(new Certificate()));
-
-        var result = trainerService.getCertificatesByTrainer(10L);
-
-        assertEquals(1, result.size());
-        verify(certificateRepository).findByCourse_Trainer_Id(10L);
+        assertThatThrownBy(() -> trainerService.completeCourse(99L))
+                .isInstanceOf(CourseNotFoundException.class);
     }
 }

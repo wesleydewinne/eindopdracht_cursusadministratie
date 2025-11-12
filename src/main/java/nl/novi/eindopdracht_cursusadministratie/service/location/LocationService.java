@@ -26,12 +26,8 @@ public class LocationService {
         return repository.findAll();
     }
 
-    public Location getLocationById(Long id) {
-        return findEntityById(id, repository, new LocationNotFoundException(id));
-    }
-
     public Location createLocation(Location location) {
-        // Als er geen blusvoorziening is, wordt dat veld leeggemaakt
+
         if (!location.isHasFireExtinguishingFacility()) {
             location.setFirefightingArea(null);
         }

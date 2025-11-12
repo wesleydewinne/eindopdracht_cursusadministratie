@@ -1,5 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.model.user;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
@@ -20,6 +21,7 @@ public class Trainer extends User {
 
     private String expertise;
 
-    @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "trainer")
+    @JsonManagedReference
     private List<Course> courses = new ArrayList<>();
 }

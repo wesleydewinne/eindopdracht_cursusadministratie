@@ -1,9 +1,27 @@
 package nl.novi.eindopdracht_cursusadministratie.controller.user;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import nl.novi.eindopdracht_cursusadministratie.dto.course.*;
+import nl.novi.eindopdracht_cursusadministratie.dto.response.DeleteResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.user.*;
+import nl.novi.eindopdracht_cursusadministratie.dto.certificate.CertificateResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.location.CreateLocationDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.location.UpdateLocationDto;
+import nl.novi.eindopdracht_cursusadministratie.helper.CourseMapper;
+import nl.novi.eindopdracht_cursusadministratie.helper.LocationMapperHelper;
+import nl.novi.eindopdracht_cursusadministratie.helper.UserMapperHelper;
+import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
+import nl.novi.eindopdracht_cursusadministratie.model.location.Location;
+import nl.novi.eindopdracht_cursusadministratie.model.report.EvacuationReport;
+import nl.novi.eindopdracht_cursusadministratie.model.user.Cursist;
+import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
+import nl.novi.eindopdracht_cursusadministratie.service.course.CourseService;
+import nl.novi.eindopdracht_cursusadministratie.service.location.LocationService;
 import nl.novi.eindopdracht_cursusadministratie.service.user.AdminService;
+import nl.novi.eindopdracht_cursusadministratie.service.user.TrainerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,123 +30,256 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller voor alle beheeracties die alleen door een Admin uitgevoerd mogen worden.
- * - Gebruikersbeheer (Cursisten & Trainers)
+ * Controller voor alle adminfunctionaliteiten:
+ * - Gebruikersbeheer (cursisten, trainers, admins)
  * - Cursusbeheer
- * - Inschrijvingen beheren
+ * - Locatiebeheer
+ * - Certificaatbeheer
+ * - Rapportbeheer (ontruimingsverslagen)
  */
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('Admin')")
+@PreAuthorize("hasRole('ADMIN')")
+@CrossOrigin
 public class AdminController {
 
     private final AdminService adminService;
+    private final CourseService courseService;
+    private final TrainerService trainerService;
+    private final LocationService locationService;
+
 
     // ============================================================
-    // GEBRUIKERSBEHEER
+    // GEBRUIKERS
     // ============================================================
 
-    /** Alle gebruikers ophalen */
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(adminService.getAllUsers());
+    public ResponseEntity<List<AdminUserResponseDto>> getAllUsers() {
+        List<User> users = adminService.getAllUsers();
+        return ResponseEntity.ok(
+                users.stream()
+                        .map(UserMapperHelper::toAdminDto)
+                        .toList()
+        );
     }
 
-    /** Gebruiker verwijderen */
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        adminService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<DeleteResponseDto> deleteUser(@PathVariable Long id) {
+        String message = adminService.deleteUser(id);
+        return ResponseEntity.ok(new DeleteResponseDto(message));
     }
+
 
     // ============================================================
     // CURSISTEN
     // ============================================================
 
-    /** Alle cursisten ophalen */
     @GetMapping("/cursisten")
-    public ResponseEntity<List<? extends User>> getAllCursisten() {
-        return ResponseEntity.ok(adminService.getAllCursisten());
+    public ResponseEntity<List<CursistResponseDto>> getAllCursisten() {
+        return ResponseEntity.ok(
+                adminService.getAllCursisten().stream()
+                        .map(UserMapperHelper::toCursistDto)
+                        .toList()
+        );
     }
 
-    /** Nieuwe cursist aanmaken */
     @PostMapping("/cursisten")
-    public ResponseEntity<User> createCursist(@RequestBody User cursist) {
-        User created = adminService.createCursist(cursist);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<CursistResponseDto> createCursist(@Valid @RequestBody AdminCursistCreateDto dto) {
+        Cursist created = adminService.createCursistFromDto(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserMapperHelper.toCursistDto(created));
     }
 
-    /** Bestaande cursist bijwerken */
     @PutMapping("/cursisten/{id}")
-    public ResponseEntity<User> updateCursist(@PathVariable Long id, @RequestBody User updatedCursist) {
-        User updated = adminService.updateCursist(id, updatedCursist);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<CursistResponseDto> updateCursist(
+            @PathVariable Long id,
+            @Valid @RequestBody AdminCursistCreateDto dto
+    ) {
+        Cursist updated = adminService.updateCursistFromDto(id, dto);
+        return ResponseEntity.ok(UserMapperHelper.toCursistDto(updated));
     }
+
 
     // ============================================================
     // TRAINERS
     // ============================================================
 
-    /** Alle trainers ophalen */
     @GetMapping("/trainers")
-    public ResponseEntity<List<? extends User>> getAllTrainers() {
-        return ResponseEntity.ok(adminService.getAllTrainers());
+    public ResponseEntity<List<TrainerResponseDto>> getAllTrainers() {
+        return ResponseEntity.ok(
+                adminService.getAllTrainers().stream()
+                        .map(UserMapperHelper::toTrainerDto)
+                        .toList()
+        );
     }
 
-    /** Nieuwe trainer aanmaken */
     @PostMapping("/trainers")
-    public ResponseEntity<User> createTrainer(@RequestBody User trainer) {
-        User created = adminService.createTrainer(trainer);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<TrainerResponseDto> createTrainer(@Valid @RequestBody AdminTrainerCreateDto dto) {
+        Trainer created = adminService.createTrainerFromDto(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserMapperHelper.toTrainerDto(created));
     }
 
-    /** Trainer bijwerken */
     @PutMapping("/trainers/{id}")
-    public ResponseEntity<User> updateTrainer(@PathVariable Long id, @RequestBody User updatedTrainer) {
-        User updated = adminService.updateTrainer(id, updatedTrainer);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<TrainerResponseDto> updateTrainer(
+            @PathVariable Long id,
+            @Valid @RequestBody TrainerUpdateRequestDto dto
+    ) {
+        Trainer updated = adminService.updateTrainer(id, dto);
+        return ResponseEntity.ok(UserMapperHelper.toTrainerDto(updated));
     }
+
 
     // ============================================================
     // CURSUSSEN
     // ============================================================
 
-    /** Alle cursussen ophalen */
     @GetMapping("/courses")
-    public ResponseEntity<List<Course>> getAllCourses() {
-        return ResponseEntity.ok(adminService.getAllCourses());
+    public ResponseEntity<List<CourseAdminResponseDto>> getAllCourses() {
+        List<Course> courses = adminService.getAllCourses();
+        return ResponseEntity.ok(
+                courses.stream()
+                        .map(CourseMapper::toAdminDto)
+                        .toList()
+        );
     }
 
-    /** Nieuwe cursus aanmaken */
+    @GetMapping("/trainers/{trainerId}/courses")
+    public ResponseEntity<List<CourseTrainerResponseDto>> getCoursesByTrainerAsAdmin(@PathVariable Long trainerId) {
+        return ResponseEntity.ok(trainerService.getCoursesByTrainer(trainerId));
+    }
+
     @PostMapping("/courses")
-    public ResponseEntity<Course> createCourse(@RequestBody Course course) {
-        Course created = adminService.createCourse(course);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<CourseAdminResponseDto> createCourse(
+            @Valid @RequestBody CourseCreateRequestDto dto
+    ) {
+        Course created = adminService.createCourseFromDto(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(CourseMapper.toAdminDto(created));
     }
 
-    /** Cursus bijwerken */
     @PutMapping("/courses/{id}")
-    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course updatedCourse) {
-        Course updated = adminService.updateCourse(id, updatedCourse);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<CourseAdminResponseDto> updateCourse(
+            @PathVariable Long id,
+            @Valid @RequestBody CourseUpdateRequestDto dto
+    ) {
+        Course updated = adminService.updateCourseFromDto(id, dto);
+        return ResponseEntity.ok(CourseMapper.toAdminDto(updated));
     }
 
-    /** Cursus verwijderen */
     @DeleteMapping("/courses/{id}")
-    public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
+    public ResponseEntity<DeleteResponseDto> deleteCourse(@PathVariable Long id) {
         adminService.deleteCourse(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new DeleteResponseDto("📚 Cursus met ID " + id + " is succesvol verwijderd."));
     }
+
 
     // ============================================================
     // REGISTRATIES
     // ============================================================
 
-    /** Inschrijving verwijderen */
     @DeleteMapping("/registrations/{id}")
-    public ResponseEntity<Void> deleteRegistration(@PathVariable Long id) {
+    public ResponseEntity<DeleteResponseDto> deleteRegistration(@PathVariable Long id) {
         adminService.deleteRegistration(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new DeleteResponseDto("📝 Registratie met ID " + id + " is succesvol verwijderd."));
+    }
+
+
+    // ============================================================
+    //  LOCATIES
+    // ============================================================
+
+    @GetMapping("/locations")
+    public ResponseEntity<List<Location>> getAllLocations() {
+        return ResponseEntity.ok(locationService.getAllLocations());
+    }
+
+    @PostMapping("/locations")
+    public ResponseEntity<Location> createLocation(@Valid @RequestBody CreateLocationDto dto) {
+        Location entity = LocationMapperHelper.toEntity(dto);
+        Location created = locationService.createLocation(entity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/locations/{id}")
+    public ResponseEntity<Location> updateLocation(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateLocationDto dto
+    ) {
+        Location updatedEntity = LocationMapperHelper.toEntity(dto);
+        Location updated = locationService.updateLocation(id, updatedEntity);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/locations/{id}")
+    public ResponseEntity<DeleteResponseDto> deleteLocation(@PathVariable Long id) {
+        locationService.deleteLocation(id);
+        return ResponseEntity.ok(new DeleteResponseDto("Locatie met ID " + id + " is succesvol verwijderd."));
+    }
+
+
+    // ============================================================
+    // CERTIFICATEN
+    // ============================================================
+
+    @GetMapping("/certificates")
+    public ResponseEntity<List<CertificateResponseDto>> getAllCertificates() {
+        return ResponseEntity.ok(
+                adminService.getAllCertificates().stream()
+                        .map(cert -> new CertificateResponseDto(
+                                cert.getId(),
+                                cert.getCertificateNumber(),
+                                cert.getCourse().getName(),
+                                cert.getStudent().getName(),
+                                cert.getIssueDate(),
+                                cert.getExpiryDate(),
+                                cert.getIssuedBy()
+                        ))
+                        .toList()
+        );
+    }
+
+    @GetMapping("/certificates/expired")
+    public ResponseEntity<List<CertificateResponseDto>> getExpiredCertificates() {
+        return ResponseEntity.ok(
+                adminService.getExpiredCertificates().stream()
+                        .map(cert -> new CertificateResponseDto(
+                                cert.getId(),
+                                cert.getCertificateNumber(),
+                                cert.getCourse().getName(),
+                                cert.getStudent().getName(),
+                                cert.getIssueDate(),
+                                cert.getExpiryDate(),
+                                cert.getIssuedBy()
+                        ))
+                        .toList()
+        );
+    }
+
+    @DeleteMapping("/certificates/{id}")
+    public ResponseEntity<DeleteResponseDto> deleteCertificate(@PathVariable Long id) {
+        adminService.deleteCertificate(id);
+        return ResponseEntity.ok(new DeleteResponseDto("🪪 Certificaat met ID " + id + " is succesvol verwijderd."));
+    }
+
+
+    // ============================================================
+    // ONTRUIMINGSVERSLAGEN
+    // ============================================================
+
+    @GetMapping("/reports")
+    public ResponseEntity<List<EvacuationReport>> getAllReports() {
+        return ResponseEntity.ok(adminService.getAllReports());
+    }
+
+    @PutMapping("/reports/{id}/approve")
+    public ResponseEntity<EvacuationReport> approveReport(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.approveReport(id));
+    }
+
+    @PutMapping("/reports/{id}/reject")
+    public ResponseEntity<EvacuationReport> rejectReport(
+            @PathVariable Long id,
+            @RequestParam String remarks
+    ) {
+        return ResponseEntity.ok(adminService.rejectReport(id, remarks));
     }
 }
