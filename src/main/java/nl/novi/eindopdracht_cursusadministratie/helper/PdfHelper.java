@@ -71,9 +71,9 @@ public class PdfHelper {
         doc.add(table);
     }
 
-    // ==========================================
-    // FOOTER
-    // ==========================================
+
+        // FOOTER
+
     /** Voeg een nette footer toe onderaan het document. */
     public static void addFooter(@NotNull Document doc, String text) throws DocumentException {
         Paragraph footer = new Paragraph(text != null ? text : "", FOOTER_FONT);

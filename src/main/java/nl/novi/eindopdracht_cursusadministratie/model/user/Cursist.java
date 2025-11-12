@@ -1,5 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.model.user;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
@@ -24,9 +25,11 @@ public class Cursist extends User {
     private boolean active = true;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Certificate> certificates = new ArrayList<>();
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Registration> registrations = new ArrayList<>();
 
     public boolean hasCompletedCourse(Course course) {

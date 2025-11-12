@@ -1,178 +1,235 @@
 package nl.novi.eindopdracht_cursusadministratie.service.certificate;
 
+import nl.novi.eindopdracht_cursusadministratie.dto.certificate.CertificateResponseDto;
 import nl.novi.eindopdracht_cursusadministratie.exception.CertificateNotFoundException;
-import nl.novi.eindopdracht_cursusadministratie.exception.CourseNotFoundException;
-import nl.novi.eindopdracht_cursusadministratie.exception.CursistNotFoundException;
-import nl.novi.eindopdracht_cursusadministratie.helper.CertificateNumberHelper;
-import nl.novi.eindopdracht_cursusadministratie.helper.DateHelper;
+import nl.novi.eindopdracht_cursusadministratie.helper.MailHelper;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.course.TrainingType;
 import nl.novi.eindopdracht_cursusadministratie.model.user.Cursist;
+import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import nl.novi.eindopdracht_cursusadministratie.repository.certificate.CertificateRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.course.CourseRepository;
 import nl.novi.eindopdracht_cursusadministratie.repository.user.UserRepository;
 import nl.novi.eindopdracht_cursusadministratie.service.pdf.PdfCertificateService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class CertificateServiceTest {
 
     @Mock
     private CertificateRepository certificateRepository;
     @Mock
-    private UserRepository userRepository;
-    @Mock
     private CourseRepository courseRepository;
     @Mock
-    private PdfCertificateService pdfCertificateService;
+    private UserRepository userRepository;
+    @Mock
+    private PdfCertificateService pdfService;
+    @Mock
+    private MailHelper mailHelper;
 
     @InjectMocks
     private CertificateService certificateService;
 
     private Course course;
-    private Cursist cursist;
+    private Trainer trainer;
+    private Cursist student;
     private Certificate certificate;
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
+
+        // Trainer
+        trainer = new Trainer();
+        trainer.setId(3L);
+        trainer.setName("Trainer X");
+
+        // Cursus
         course = new Course();
         course.setId(1L);
-        course.setName("BHV Basis");
+        course.setName("BHV Basiscursus");
         course.setType(TrainingType.BHV);
+        course.setTrainer(trainer);
+        course.setEndDate(LocalDate.now().minusDays(1));
 
-        cursist = new Cursist();
-        cursist.setId(1L);
-        cursist.setName("Piet Cursist");
-        cursist.setEmail("piet@bhv.nl");
+        // Cursist (mock, zodat hasCompletedCourse() werkt)
+        student = mock(Cursist.class);
+        when(student.getId()).thenReturn(2L);
+        when(student.getName()).thenReturn("Jan Jansen");
+        when(student.getEmail()).thenReturn("jan@example.com");
+        when(student.hasCompletedCourse(any(Course.class))).thenReturn(true);
 
+        // Basis-certificaat
         certificate = new Certificate();
-        certificate.setId(1L);
-        certificate.setCertificateNumber("CERT-001");
+        certificate.setId(99L);
         certificate.setCourse(course);
-        certificate.setStudent(cursist);
+        certificate.setStudent(student);
+        certificate.setCertificateNumber("CERT-2025-001");
+        certificate.setIssueDate(LocalDate.now());
+        certificate.setExpiryDate(LocalDate.now().plusYears(1));
+        certificate.setIssuedBy("Trainer X");
     }
 
-    // =============================================================
-    // TESTS
-    // =============================================================
-
+    // ============================================================
+    // GENERATE CERTIFICATE – HAPPY PATH
+    // ============================================================
     @Test
-    void shouldReturnAllCertificates() {
-        // Arrange
-        when(certificateRepository.findAll()).thenReturn(List.of(certificate));
-
-        // Act
-        List<Certificate> result = certificateService.getAllCertificates();
-
-        // Assert
-        assertEquals(1, result.size());
-        assertEquals("CERT-001", result.get(0).getCertificateNumber());
-        verify(certificateRepository, times(1)).findAll();
-    }
-
-    @Test
-    void shouldReturnCertificateById_whenExists() {
-        // Arrange
-        when(certificateRepository.findById(1L)).thenReturn(Optional.of(certificate));
-
-        // Act
-        Certificate found = certificateService.getCertificateById(1L);
-
-        // Assert
-        assertNotNull(found);
-        assertEquals("CERT-001", found.getCertificateNumber());
-        verify(certificateRepository, times(1)).findById(1L);
-    }
-
-    @Test
-    void shouldThrowException_whenCertificateNotFound() {
-        // Arrange
-        when(certificateRepository.findById(99L)).thenReturn(Optional.empty());
-
-        // Act + Assert
-        assertThrows(CertificateNotFoundException.class, () -> certificateService.getCertificateById(99L));
-    }
-
-    @Test
-    void shouldCreateCertificate_whenCursistCompletedCourse() {
+    @DisplayName("Certificaat wordt gegenereerd voor goedgekeurde cursist door juiste trainer")
+    void generateCertificate_Success() {
         // Arrange
         when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(cursist));
-        when(pdfCertificateService.generateCertificatePdf(any())).thenReturn("PDFDATA".getBytes());
-        when(certificateRepository.save(any(Certificate.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(userRepository.findById(2L)).thenReturn(Optional.of((User) student)); // cast vereist
+        when(userRepository.findById(3L)).thenReturn(Optional.of((User) trainer));
+        when(certificateRepository.findByCourse_IdAndStudent_Id(1L, 2L))
+                .thenReturn(Optional.empty());
+        when(pdfService.generateCertificatePdf(any(Certificate.class)))
+                .thenReturn("fake-pdf".getBytes());
+        when(certificateRepository.save(any(Certificate.class)))
+                .thenAnswer(invocation -> {
+                    Certificate saved = invocation.getArgument(0);
+                    saved.setId(999L);
+                    return saved;
+                });
 
-        // Mock dat de cursist de cursus heeft voltooid
-        Cursist spyCursist = spy(cursist);
-        doReturn(true).when(spyCursist).hasCompletedCourse(course);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(spyCursist));
+        CertificateResponseDto result = certificateService.generateCertificate(1L, 2L, 3L);
 
-        // Act
-        Certificate result = certificateService.createCertificate(1L, 1L);
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(999L);
+        assertThat(result.studentName()).isEqualTo("Jan Jansen");
+        assertThat(result.courseName()).isEqualTo("BHV Basiscursus");
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("BHV Basis", result.getCourse().getName());
-        assertNotNull(result.getCertificateNumber());
-        verify(certificateRepository, times(1)).save(any(Certificate.class));
+        verify(pdfService).generateCertificatePdf(any(Certificate.class));
+        verify(certificateRepository).save(any(Certificate.class));
     }
 
+    // ============================================================
+    // GENERATE CERTIFICATE – NIET-AFGEBROND
+    // ============================================================
     @Test
-    void shouldThrowException_whenCursistNotCompletedCourse() {
-        // Arrange
+    @DisplayName("Bij niet-afgeronde cursus wordt IllegalStateException gegooid")
+    void generateCertificate_NotCompleted_Throws() {
+        when(student.hasCompletedCourse(any(Course.class))).thenReturn(false);
+
         when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(cursist));
+        when(userRepository.findById(2L)).thenReturn(Optional.of((User) student));
+        when(userRepository.findById(3L)).thenReturn(Optional.of((User) trainer));
 
-        // Mock dat cursist de cursus niet voltooid heeft
-        Cursist spyCursist = spy(cursist);
-        doReturn(false).when(spyCursist).hasCompletedCourse(course);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(spyCursist));
+        assertThatThrownBy(() -> certificateService.generateCertificate(1L, 2L, 3L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("nog niet afgerond");
+    }
 
-        // Act + Assert
-        assertThrows(CursistNotFoundException.class, () -> certificateService.createCertificate(1L, 1L));
+    // ============================================================
+    // GET EXPIRED CERTIFICATES
+    // ============================================================
+    @Test
+    @DisplayName("Service geeft verlopen certificaten correct terug")
+    void getExpiredCertificates() {
+        Certificate expired = new Certificate();
+        expired.setId(1L);
+        expired.setCourse(course);
+        expired.setStudent(student);
+        expired.setExpiryDate(LocalDate.now().minusDays(1));
+
+        Certificate valid = new Certificate();
+        valid.setId(2L);
+        valid.setCourse(course);
+        valid.setStudent(student);
+        valid.setExpiryDate(LocalDate.now().plusDays(10));
+
+        when(certificateRepository.findAll()).thenReturn(List.of(expired, valid));
+
+        var result = certificateService.getExpiredCertificates();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(1L);
+    }
+
+    // ============================================================
+    // GET CERTIFICATES EXPIRING SOON
+    // ============================================================
+    @Test
+    @DisplayName("Service geeft certificaten terug die binnenkort verlopen")
+    void getCertificatesExpiringSoon() {
+        Certificate soon = new Certificate();
+        soon.setId(3L);
+        soon.setCourse(course);
+        soon.setStudent(student);
+        soon.setExpiryDate(LocalDate.now().plusDays(5));
+
+        Certificate later = new Certificate();
+        later.setId(4L);
+        later.setCourse(course);
+        later.setStudent(student);
+        later.setExpiryDate(LocalDate.now().plusDays(30));
+
+        when(certificateRepository.findAll()).thenReturn(List.of(soon, later));
+
+        var result = certificateService.getCertificatesExpiringSoon(7);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(3L);
+    }
+
+    // ============================================================
+    // GET CERTIFICATE PDF
+    // ============================================================
+    @Test
+    @DisplayName("PDF wordt opgehaald als die aanwezig is")
+    void getCertificatePdf_Existing() {
+        byte[] pdfBytes = "existing-pdf".getBytes();
+        certificate.setPdfData(pdfBytes);
+
+        when(certificateRepository.findById(99L)).thenReturn(Optional.of(certificate));
+
+        byte[] result = certificateService.getCertificatePdf(99L);
+
+        assertThat(result).isEqualTo(pdfBytes);
+        verify(pdfService, never()).generateCertificatePdf(any());
     }
 
     @Test
-    void shouldThrowException_whenCourseNotFound() {
-        // Arrange
-        when(courseRepository.findById(99L)).thenReturn(Optional.empty());
+    @DisplayName("PDF wordt opnieuw gegenereerd als die ontbreekt")
+    void getCertificatePdf_RegenerateIfMissing() {
+        certificate.setPdfData(null);
 
-        // Act + Assert
-        assertThrows(CourseNotFoundException.class, () -> certificateService.createCertificate(1L, 99L));
+        when(certificateRepository.findById(99L)).thenReturn(Optional.of(certificate));
+        when(pdfService.generateCertificatePdf(any(Certificate.class)))
+                .thenReturn("new-pdf".getBytes());
+        when(certificateRepository.save(any(Certificate.class)))
+                .thenReturn(certificate);
+
+        byte[] result = certificateService.getCertificatePdf(99L);
+
+        assertThat(result).isEqualTo("new-pdf".getBytes());
+        verify(pdfService).generateCertificatePdf(any(Certificate.class));
+        verify(certificateRepository).save(any(Certificate.class));
     }
 
+    // ============================================================
+    // EXCEPTION CASE
+    // ============================================================
     @Test
-    void shouldDeleteCertificate_whenExists() {
-        // Arrange
-        when(certificateRepository.existsById(1L)).thenReturn(true);
+    @DisplayName("Bij onbekend certificaat-ID wordt CertificateNotFoundException gegooid")
+    void getCertificatePdf_NotFound_Throws() {
+        when(certificateRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // Act
-        certificateService.deleteCertificate(1L);
-
-        // Assert
-        verify(certificateRepository, times(1)).deleteById(1L);
-    }
-
-    @Test
-    void shouldThrowException_whenDeletingNonExistingCertificate() {
-        // Arrange
-        when(certificateRepository.existsById(5L)).thenReturn(false);
-
-        // Act + Assert
-        assertThrows(CertificateNotFoundException.class, () -> certificateService.deleteCertificate(5L));
+        assertThatThrownBy(() -> certificateService.getCertificatePdf(999L))
+                .isInstanceOf(CertificateNotFoundException.class)
+                .hasMessageContaining("999");
     }
 }

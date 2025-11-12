@@ -1,5 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.model.certificate;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,6 +9,10 @@ import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 
 import java.time.LocalDate;
+
+// ⬇️ deze 2 imports toevoegen:
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.type.descriptor.jdbc.BinaryJdbcType;
 
 @Entity
 @Table(name = "certificates")
@@ -25,17 +30,19 @@ public class Certificate {
     private LocalDate expiryDate;
     private String issuedBy;
 
-    //  Relatie met de cursist
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
+    @JsonBackReference
     private User student;
 
-    //  Relatie met de cursus
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
+    @JsonBackReference
     private Course course;
 
     @Lob
-    @Column(name = "pdf_data", columnDefinition = "BYTEA")
+    @Basic(fetch = FetchType.LAZY)
+    @JdbcType(BinaryJdbcType.class)
+    @Column(name = "pdf_data")   // columnDefinition weghalen
     private byte[] pdfData;
 }

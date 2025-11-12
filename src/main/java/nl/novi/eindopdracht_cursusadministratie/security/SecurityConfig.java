@@ -1,7 +1,6 @@
 package nl.novi.eindopdracht_cursusadministratie.security;
 
 import nl.novi.eindopdracht_cursusadministratie.security.filter.JwtRequestFilter;
-import nl.novi.eindopdracht_cursusadministratie.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,6 +30,10 @@ public class SecurityConfig {
         this.jwtRequestFilter = jwtRequestFilter;
     }
 
+    // ============================================================
+    // AUTHENTICATIE EN ENCODING
+    // ============================================================
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -44,6 +47,10 @@ public class SecurityConfig {
         return new ProviderManager(authProvider);
     }
 
+    // ============================================================
+    // SECURITYCONFIG
+    // ============================================================
+
     @Bean
     protected SecurityFilterChain filter(HttpSecurity http) throws Exception {
         http
@@ -51,16 +58,50 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+
+                        //  OPEN ENDPOINTS
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/trainers/**").hasRole("TRAINER")
-                        .requestMatchers("/api/cursisten/**").hasRole("CURSIST")
+
+                        //  USERS (JWT bepaalt rol)
+                        .requestMatchers("/api/users/**").authenticated()
+
+                        //  COURSES
+                        .requestMatchers(HttpMethod.GET, "/api/courses/**").hasAnyRole("ADMIN", "TRAINER", "CURSIST")
+                        .requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/courses/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/courses/**").hasRole("ADMIN")
+
+                        //  REGISTRATIONS
+                        .requestMatchers(HttpMethod.GET, "/api/registrations/**").hasAnyRole("ADMIN", "TRAINER")
+                        .requestMatchers(HttpMethod.POST, "/api/registrations/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/registrations/**").hasRole("TRAINER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/registrations/**").hasRole("ADMIN")
+
+                        // 🪪 CERTIFICATES
+                        .requestMatchers(HttpMethod.GET, "/api/certificates/**").hasAnyRole("ADMIN", "TRAINER", "CURSIST")
+                        .requestMatchers(HttpMethod.POST, "/api/certificates/**").hasRole("TRAINER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/certificates/**").hasRole("ADMIN")
+
+                        //  REPORTS
+                        .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("ADMIN", "TRAINER", "CURSIST")
+                        .requestMatchers(HttpMethod.POST, "/api/reports/**").hasRole("TRAINER")
+                        .requestMatchers(HttpMethod.PUT, "/api/reports/**").hasAnyRole("ADMIN", "TRAINER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/reports/**").hasRole("ADMIN")
+
+                        //  LOCATIONS
+                        .requestMatchers(HttpMethod.GET, "/api/locations/**").hasAnyRole("ADMIN", "TRAINER", "CURSIST")
+                        .requestMatchers(HttpMethod.POST, "/api/locations/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/locations/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/locations/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 )
+
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 }

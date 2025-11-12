@@ -1,9 +1,12 @@
 package nl.novi.eindopdracht_cursusadministratie.model.report;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.type.descriptor.jdbc.BinaryJdbcType;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 
@@ -18,8 +21,9 @@ public class EvacuationReport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
+    @OneToOne
+    @JoinColumn(name = "course_id")
+    @JsonBackReference
     private Course course;
 
     @ManyToOne
@@ -46,6 +50,8 @@ public class EvacuationReport {
     private boolean visibleForStudents = false;
 
     @Lob
-    @Column(name = "pdf_data", columnDefinition = "BYTEA")
+    @Basic(fetch = FetchType.LAZY)
+    @JdbcType(BinaryJdbcType.class)
+    @Column(name = "pdf_data")
     private byte[] pdfData;
 }

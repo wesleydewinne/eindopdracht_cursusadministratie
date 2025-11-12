@@ -4,7 +4,6 @@ import nl.novi.eindopdracht_cursusadministratie.model.user.Role;
 import nl.novi.eindopdracht_cursusadministratie.model.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -26,12 +25,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByEmail(String email);
 
-    /**
-     * Haalt alle gebruikers op met een specifieke rol.
-     * Handig voor beheerfuncties, bijvoorbeeld alle trainers of cursisten.
-     *
-     * @param role de rol (ADMIN, TRAINER, CURSIST)
-     * @return lijst van gebruikers met de opgegeven rol
-     */
-    List<User> findByRole(Role role);
 }

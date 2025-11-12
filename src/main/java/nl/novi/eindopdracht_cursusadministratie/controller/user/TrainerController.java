@@ -3,10 +3,16 @@ package nl.novi.eindopdracht_cursusadministratie.controller.user;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import nl.novi.eindopdracht_cursusadministratie.dto.certificate.GenerateCertificateRequest;
+import nl.novi.eindopdracht_cursusadministratie.dto.course.CourseCompletionSummaryDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.course.CourseTrainerResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.registration.RegistrationStatusResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.user.TrainerResponseDto;
+import nl.novi.eindopdracht_cursusadministratie.dto.user.TrainerUpdateRequestDto;
+import nl.novi.eindopdracht_cursusadministratie.helper.TrainerCourseOwnershipHelper;
+import nl.novi.eindopdracht_cursusadministratie.helper.TrainerSecurityHelper;
 import nl.novi.eindopdracht_cursusadministratie.model.certificate.Certificate;
 import nl.novi.eindopdracht_cursusadministratie.model.course.Course;
-import nl.novi.eindopdracht_cursusadministratie.model.registration.Registration;
-import nl.novi.eindopdracht_cursusadministratie.model.user.Trainer;
+import nl.novi.eindopdracht_cursusadministratie.model.registration.RegistrationStatus;
 import nl.novi.eindopdracht_cursusadministratie.service.user.TrainerService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,71 +20,121 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controller voor trainers.
- * Trainers kunnen hun eigen gegevens beheren, cursussen inzien,
- * aanwezigheid van cursisten registreren en certificaten genereren.
- */
 @RestController
 @RequestMapping("/api/trainers")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('TRAINER')")
+@CrossOrigin
 public class TrainerController {
 
     private final TrainerService trainerService;
 
+
     // ================================================================
-    //  TRAINER INFO
+    // TRAINER PROFIEL
     // ================================================================
 
-    /** Eigen gegevens ophalen */
     @GetMapping("/{id}")
-    public ResponseEntity<Trainer> getTrainerById(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<TrainerResponseDto> getTrainerById(@PathVariable Long id) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
         return ResponseEntity.ok(trainerService.getTrainerById(id));
     }
 
-    /** Eigen gegevens bijwerken */
     @PutMapping("/{id}")
-    public ResponseEntity<Trainer> updateTrainer(@PathVariable Long id, @RequestBody Trainer trainer) {
-        return ResponseEntity.ok(trainerService.updateTrainer(id, trainer));
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<TrainerResponseDto> updateTrainer(
+            @PathVariable Long id,
+            @RequestBody TrainerUpdateRequestDto dto
+    ) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+        return ResponseEntity.ok(trainerService.updateTrainer(id, dto));
     }
 
+
     // ================================================================
-    //  CURSUSSEN
+    // CURSUSSEN
     // ================================================================
 
-    /** Alle cursussen van deze trainer ophalen */
-    @GetMapping("/{id}/courses")
-    public ResponseEntity<List<Course>> getCoursesByTrainer(@PathVariable Long id) {
-        return ResponseEntity.ok(trainerService.getCoursesByTrainer(id));
+    @GetMapping("/my-courses")
+    public ResponseEntity<List<CourseTrainerResponseDto>> getMyCourses() {
+        Long trainerId = TrainerSecurityHelper.getAuthenticatedTrainerId();
+        return ResponseEntity.ok(trainerService.getCoursesByTrainer(trainerId));
     }
 
+    @PutMapping("/courses/{courseId}/complete")
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<CourseCompletionSummaryDto> completeCourse(@PathVariable Long courseId) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+        Course course = trainerService.getCourseEntity(courseId);
+        TrainerCourseOwnershipHelper.verifyOwnershipOrAdmin(course);
+
+        return ResponseEntity.ok(trainerService.completeCourse(courseId));
+    }
+
+
     // ================================================================
-    //  AANWEZIGHEID
+    // INSCHRIJVINGEN / AANWEZIGHEID / STATUS
     // ================================================================
 
-    /**
-     * Registreert de aanwezigheid van een cursist voor een specifieke inschrijving.
-     * @param registrationId ID van de inschrijving
-     * @param aanwezig true = aanwezig, false = afwezig
-     */
-    @PutMapping("/registrations/{registrationId}/attendance")
-    public ResponseEntity<Registration> markAttendance(
+    @PutMapping("/courses/{courseId}/registrations/{registrationId}/attendance")
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<RegistrationStatusResponseDto> markAttendanceForCourse(
+            @PathVariable Long courseId,
             @PathVariable Long registrationId,
-            @RequestParam boolean aanwezig) {
-        return ResponseEntity.ok(trainerService.markAttendance(registrationId, aanwezig));
+            @RequestParam boolean aanwezig
+    ) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+
+        Course course = trainerService.getCourseEntity(courseId);
+        TrainerCourseOwnershipHelper.verifyOwnershipOrAdmin(course);
+
+        return ResponseEntity.ok(trainerService.markAttendanceForCourse(courseId, registrationId, aanwezig));
     }
 
-    // ================================================================
-    //  CERTIFICATEN
-    // ================================================================
+    @PutMapping("/courses/{courseId}/registrations/{registrationId}/status")
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<RegistrationStatusResponseDto> updateRegistrationStatusForCourse(
+            @PathVariable Long courseId,
+            @PathVariable Long registrationId,
+            @RequestParam RegistrationStatus status
+    ) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+
+        Course course = trainerService.getCourseEntity(courseId);
+        TrainerCourseOwnershipHelper.verifyOwnershipOrAdmin(course);
+
+        return ResponseEntity.ok(trainerService.updateRegistrationStatusForCourse(courseId, registrationId, status));
+    }
 
     /**
-     * Genereert een nieuw certificaat voor een cursist.
-     * Ontvangt alleen de minimale gegevens via GenerateCertificateRequest.
+     * Geeft alle aanwezige cursisten die nog niet beoordeeld zijn.
      */
+    @GetMapping("/courses/{courseId}/registrations/unreviewed")
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<List<RegistrationStatusResponseDto>> getUnreviewedRegistrationsForCourse(
+            @PathVariable Long courseId
+    ) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+
+        Course course = trainerService.getCourseEntity(courseId);
+        TrainerCourseOwnershipHelper.verifyOwnershipOrAdmin(course);
+
+        return ResponseEntity.ok(trainerService.getUnreviewedRegistrationsForCourse(courseId));
+    }
+
+
+    // ================================================================
+    // CERTIFICATEN
+    // ================================================================
+
     @PostMapping("/certificates")
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
     public ResponseEntity<Certificate> generateCertificate(@Valid @RequestBody GenerateCertificateRequest req) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+
+        Course course = trainerService.getCourseEntity(req.courseId());
+        TrainerCourseOwnershipHelper.verifyOwnershipOrAdmin(course);
+
         Certificate createdCertificate = trainerService.generateCertificate(
                 req.courseId(),
                 req.studentId(),
@@ -87,9 +143,10 @@ public class TrainerController {
         return ResponseEntity.ok(createdCertificate);
     }
 
-    /** Alle certificaten van deze trainer ophalen */
-    @GetMapping("/{id}/certificates")
-    public ResponseEntity<List<Certificate>> getCertificatesByTrainer(@PathVariable Long id) {
-        return ResponseEntity.ok(trainerService.getCertificatesByTrainer(id));
+    @GetMapping("/{trainerId}/certificates")
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public ResponseEntity<List<Certificate>> getCertificatesByTrainer(@PathVariable Long trainerId) {
+        TrainerSecurityHelper.verifyTrainerOrAdmin();
+        return ResponseEntity.ok(trainerService.getCertificatesByTrainer(trainerId));
     }
 }
